@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawScoreGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawCrownGlyph } from '../game/glyphs.js';
+import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawUmbrellaGlyph, drawScoreGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawCrownGlyph } from '../game/glyphs.js';
 
-export default function AchievementIcon({ icon }) {
+// Glyphs are drawn for a 32x32 box centered at (16, 16); scale to the requested size.
+export default function AchievementIcon({ icon, size = 18 }) {
     const canvasRef = useRef(null);
 
     useEffect(() => {
@@ -9,21 +10,22 @@ export default function AchievementIcon({ icon }) {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, 18, 18);
+        ctx.clearRect(0, 0, size, size);
         ctx.save();
-        ctx.scale(0.5625, 0.5625);
+        ctx.scale(size / 32, size / 32);
         const cx = 16;
         const cy = 16;
-        if (icon === 'jetpack')      drawJetpackGlyph(ctx, cx, cy);
-        else if (icon === 'boots')   drawBootsGlyph(ctx, cx, cy);
-        else if (icon === 'star')    drawStarGlyph(ctx, cx, cy);
-        else if (icon === 'score')   drawScoreGlyph(ctx, cx, cy);
-        else if (icon === 'bag')     drawCoinBagGlyph(ctx, cx, cy);
-        else if (icon === 'bar')     drawGoldBarGlyph(ctx, cx, cy);
-        else if (icon === 'gem')     drawRedGemGlyph(ctx, cx, cy);
-        else if (icon === 'crown')   drawCrownGlyph(ctx, cx, cy);
+        if (icon === 'jetpack')       drawJetpackGlyph(ctx, cx, cy);
+        else if (icon === 'boots')    drawBootsGlyph(ctx, cx, cy);
+        else if (icon === 'star')     drawStarGlyph(ctx, cx, cy);
+        else if (icon === 'umbrella') drawUmbrellaGlyph(ctx, cx, cy);
+        else if (icon === 'score')    drawScoreGlyph(ctx, cx, cy);
+        else if (icon === 'bag')      drawCoinBagGlyph(ctx, cx, cy);
+        else if (icon === 'bar')      drawGoldBarGlyph(ctx, cx, cy);
+        else if (icon === 'gem')      drawRedGemGlyph(ctx, cx, cy);
+        else if (icon === 'crown')    drawCrownGlyph(ctx, cx, cy);
         ctx.restore();
-    }, [icon]);
+    }, [icon, size]);
 
-    return <canvas ref={canvasRef} width="18" height="18" />;
+    return <canvas ref={canvasRef} width={size} height={size} />;
 }

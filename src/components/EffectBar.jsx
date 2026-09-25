@@ -1,3 +1,5 @@
+import AchievementIcon from './AchievementIcon.jsx';
+
 export default function EffectBar({ effects }) {
     if (!effects || effects.length === 0) return null;
     const labels = { jetpack: 'Jetpack', boots: 'Boots', umbrella: 'Umbrella', star: 'Star' };
@@ -8,7 +10,9 @@ export default function EffectBar({ effects }) {
                 const label = labels[e.type] ?? e.type;
                 return (
                     <div className="effect-bar-wrapper" key={e.type}>
-                        <span className="effect-bar-label">{label}</span>
+                        <span className="effect-bar-icon" title={label} aria-label={label}>
+                            <AchievementIcon icon={e.type} size={24} />
+                        </span>
                         <div className="effect-bar-track">
                             <div className={`effect-bar-fill ${e.type}`} style={{ width: `${pct}%` }} />
                         </div>
