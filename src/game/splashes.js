@@ -29,6 +29,8 @@ export const SPLASHES = Object.freeze([
     'Blunday > Sunday!',
     'Emergency exit rocket included!',
     'No cubes were harmed!',
+    'Some jumps are impossible without upgrades!',
+    'How does it feel... to jump on a Blue Monday?',
 ]);
 
 export function randomSplash() {

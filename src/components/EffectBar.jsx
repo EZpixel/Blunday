@@ -11,7 +11,7 @@ export default function EffectBar({ effects }) {
                 return (
                     <div className="effect-bar-wrapper" key={e.type}>
                         <span className="effect-bar-icon" title={label} aria-label={label}>
-                            <AchievementIcon icon={e.type} size={24} />
+                            <AchievementIcon icon={e.type} size={18} />
                         </span>
                         <div className="effect-bar-track">
                             <div className={`effect-bar-fill ${e.type}`} style={{ width: `${pct}%` }} />

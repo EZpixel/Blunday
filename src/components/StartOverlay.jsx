@@ -4,7 +4,7 @@ import { randomSplash } from '../game/splashes.js';
 export default function StartOverlay({ onPlay, onAchievements, onUpgrades }) {
     const [splash] = useState(() => randomSplash());
     return (
-        <div className="overlay">
+        <div className="overlay start-overlay">
             <div className="title-wrap">
                 <h1>Blunday</h1>
                 <span className="splash" aria-hidden="true">{splash}</span>
@@ -15,7 +15,7 @@ export default function StartOverlay({ onPlay, onAchievements, onUpgrades }) {
                 <button onClick={onUpgrades}>Upgrades</button>
                 <button onClick={onAchievements}>Achievements</button>
             </div>
-            <span className="version-label">RC2</span>
+            <span className="version-label">RC3</span>
         </div>
     );
 }

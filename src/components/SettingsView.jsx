@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { clearSaveData } from '../game/storage.js';
+import BackButton from './BackButton.jsx';
 
 export default function SettingsView({ onBack }) {
     const [confirming, setConfirming] = useState(false);
@@ -16,7 +17,7 @@ export default function SettingsView({ onBack }) {
             ) : (
                 <button onClick={() => setConfirming(true)}>Reset Progress</button>
             )}
-            <button onClick={onBack}>Back</button>
+            <BackButton onClick={onBack} />
         </div>
     );
 }

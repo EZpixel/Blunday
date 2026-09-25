@@ -3,6 +3,7 @@ import { UPGRADES, getUpgradeDisplay, getNextCost, purchase, areAllUpgradesMaxed
 import { unlock } from '../game/achievements.js';
 import { getGold } from '../game/wallet.js';
 import GoldIcon from './GoldIcon.jsx';
+import BackButton from './BackButton.jsx';
 
 export default function UpgradesView({ onBack }) {
     const [, forceRefresh] = useState(0);
@@ -50,7 +51,7 @@ export default function UpgradesView({ onBack }) {
                     );
                 })}
             </ul>
-            <button onClick={onBack}>Back</button>
+            <BackButton onClick={onBack} />
         </div>
     );
 }

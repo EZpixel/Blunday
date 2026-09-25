@@ -1,5 +1,6 @@
 import { getAll } from '../game/achievements.js';
 import AchievementIcon from './AchievementIcon.jsx';
+import BackButton from './BackButton.jsx';
 
 export default function AchievementsView({ onBack }) {
     const achievements = getAll();
@@ -18,7 +19,7 @@ export default function AchievementsView({ onBack }) {
                     </li>
                 ))}
             </ul>
-            <button onClick={onBack}>Back</button>
+            <BackButton onClick={onBack} />
         </div>
     );
 }

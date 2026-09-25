@@ -1,3 +1,15 @@
+/* Shared outline + drop-shadow styles for titles, buttons and highlighted text */
+:root {
+    --ink: #0d1640;
+    --outline-1: 1px 0 var(--ink), -1px 0 var(--ink), 0 1px var(--ink), 0 -1px var(--ink),
+                 1px 1px var(--ink), -1px -1px var(--ink), 1px -1px var(--ink), -1px 1px var(--ink);
+    --outline-2: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink),
+                 2px 2px var(--ink), -2px -2px var(--ink), 2px -2px var(--ink), -2px 2px var(--ink);
+    --outline-3: 3px 0 var(--ink), -3px 0 var(--ink), 0 3px var(--ink), 0 -3px var(--ink),
+                 2px 2px var(--ink), -2px -2px var(--ink), 2px -2px var(--ink), -2px 2px var(--ink),
+                 3px 1px var(--ink), -3px -1px var(--ink), 1px 3px var(--ink), -1px -3px var(--ink);
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -45,7 +57,7 @@ body {
     font-size: 15px;
     font-weight: bold;
     color: #fff;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+    text-shadow: var(--outline-2), 0 3px 3px rgba(0, 0, 0, 0.6);
     z-index: 10;
 }
 
@@ -74,10 +86,17 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.8));
+}
+
+/* Override `.game-wrapper canvas` (400x600), which also matches this icon */
+.effect-bar-icon canvas {
+    display: block;
+    width: 18px;
+    height: 18px;
 }
 
 .effect-bar-track {
@@ -129,8 +148,28 @@ body {
 .overlay h1 {
     font-size: 38px;
     font-weight: bold;
-    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+    text-shadow: var(--outline-3), 0 5px 0 var(--ink), 0 8px 8px rgba(0, 0, 0, 0.6);
     margin: 0;
+}
+
+/* Main menu title: bigger, with a blue 3D extrusion under the outline */
+.title-wrap h1 {
+    font-size: 52px;
+    letter-spacing: 2px;
+    color: #fff;
+    text-shadow:
+        var(--outline-3),
+        0 4px 0 #2a5fc0,
+        0 6px 0 #1b3a8a,
+        0 8px 0 var(--ink),
+        0 12px 12px rgba(0, 0, 0, 0.7),
+        0 0 24px rgba(102, 170, 255, 0.55);
+}
+
+/* Main menu: extra bottom padding shifts the centered content up ~30px */
+.start-overlay {
+    padding-bottom: 80px;
 }
 
 .title-wrap {
@@ -142,26 +181,32 @@ body {
 .splash {
     position: absolute;
     left: calc(100% - 10px);
-    top: calc(100% + 4px);
+    /* Anchored by its top edge (not its center) so a second line grows downward, away from the title */
+    top: calc(100% - 3px);
     transform-origin: center;
     color: #ffe08a;
     font-weight: bold;
     font-size: 12px;
-    white-space: nowrap;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+    /* Short phrases stay on one line; longer ones wrap to two balanced lines */
+    width: max-content;
+    max-width: 200px;
+    text-align: center;
+    text-wrap: balance;
+    line-height: 1.2;
+    text-shadow: var(--outline-1), 2px 3px 0 var(--ink);
     pointer-events: none;
     animation: splashPulse 0.5s ease-in-out infinite alternate;
 }
 
 @keyframes splashPulse {
-    from { transform: translate(-50%, -50%) rotate(-14deg) scale(1); }
-    to   { transform: translate(-50%, -50%) rotate(-14deg) scale(1.08); }
+    from { transform: translate(-50%, 0) rotate(-14deg) scale(1); }
+    to   { transform: translate(-50%, 0) rotate(-14deg) scale(1.08); }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .splash {
         animation: none;
-        transform: translate(-50%, -50%) rotate(-14deg);
+        transform: translate(-50%, 0) rotate(-14deg);
     }
 }
 
@@ -179,6 +224,7 @@ body {
     font-size: 18px;
     color: #ffe08a;
     font-weight: bold;
+    text-shadow: var(--outline-2), 0 3px 0 var(--ink);
     margin: 0;
 }
 
@@ -187,16 +233,71 @@ body {
     padding: 10px 28px;
     font-size: 16px;
     font-weight: bold;
-    border: none;
-    border-radius: 6px;
+    border: 2px solid var(--ink);
+    border-radius: 8px;
     cursor: pointer;
-    background: #4488dd;
+    background: linear-gradient(#5b9cf0, #3a78cc);
     color: #fff;
-    transition: background 0.15s;
+    text-shadow: var(--outline-1), 0 2px 0 var(--ink);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 3px 0 #1b3a8a, 0 4px 6px rgba(0, 0, 0, 0.5);
+    transition: background 0.15s, transform 0.05s, box-shadow 0.05s;
+    position: relative;
 }
 
-.overlay button:hover {
-    background: #66aaff;
+/* Invisible hit area over the 3D edge, so clicks on the edge land on the button */
+.overlay button::before {
+    content: '';
+    position: absolute;
+    inset: -2px -2px -5px -2px;
+}
+
+.overlay button:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), 0 1px 0 #1b3a8a, 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* While pressed the button sits 2px lower; stretch the hit area up so the
+   cursor stays over it and mouseup still counts as a click */
+.overlay button:active:not(:disabled)::before {
+    inset: -4px -2px -3px -2px;
+}
+
+/* Menu buttons share one width so the column lines up (Buy buttons keep their own size) */
+.overlay > button,
+.menu-buttons button {
+    width: 200px;
+}
+
+.overlay button:hover:not(:disabled) {
+    background: linear-gradient(#7ab4ff, #4f8ee6);
+}
+
+.overlay button:disabled {
+    background: linear-gradient(#777, #5c5c5c);
+    color: #bbb;
+    text-shadow: none;
+    box-shadow: 0 3px 0 #3a3a3a;
+    cursor: not-allowed;
+}
+
+/* Icon-only back button, top-left corner of list screens */
+.overlay .back-button {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.back-button svg {
+    display: block;
+    filter: drop-shadow(0 2px 0 var(--ink));
 }
 
 .game-hint {
@@ -252,6 +353,7 @@ body {
     font-size: 14px;
     font-weight: bold;
     color: #fff;
+    text-shadow: var(--outline-1), 0 2px 0 var(--ink);
 }
 
 .achievement span {
@@ -322,6 +424,11 @@ body {
     margin-top: 0;
     padding: 4px 14px;
     font-size: 13px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 0 #1b3a8a;
+}
+
+.upgrade-buy-row button:disabled {
+    box-shadow: 0 2px 0 #3a3a3a;
 }
 
 /* Fully upgraded badge */
@@ -337,10 +444,13 @@ body {
 /* Gold display in HUD */
 .gold-hud {
     color: #ffd700;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+    text-shadow: var(--outline-2), 0 3px 0 var(--ink);
 }
 
 .gold-icon { vertical-align: -2px; margin-right: 3px; }
+
+/* The "$" is SVG text and would inherit the parent's outline text-shadow */
+.gold-icon text { text-shadow: none; }
 
 /* Toast notification — anchored near top-center of the game canvas */
 .toast {
