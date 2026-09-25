@@ -1,0 +1,385 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0a0820;
+    font-family: sans-serif;
+}
+
+.game-wrapper {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    border: 2px solid #333;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.game-wrapper canvas {
+    display: block;
+    width: 400px;
+    height: 600px;
+}
+
+/* Score HUD — top corners, on top of canvas */
+.score-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    pointer-events: none;
+    font-size: 15px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+}
+
+/* Effect bar — bottom of canvas */
+.effect-bar-stack {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.effect-bar-wrapper {
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.effect-bar-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    min-width: 56px;
+}
+
+.effect-bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.effect-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.05s linear;
+}
+
+.effect-bar-fill.jetpack {
+    background: linear-gradient(90deg, #ff6644, #ffaa22);
+}
+
+.effect-bar-fill.boots {
+    background: linear-gradient(90deg, #8844cc, #cc88ff);
+}
+
+.effect-bar-fill.star {
+    background: linear-gradient(90deg, #ffcc00, #fff099);
+}
+
+.effect-bar-fill.umbrella {
+    background: linear-gradient(90deg, #4466cc, #88aaff);
+}
+
+/* Overlays (start / game over) */
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 20;
+    gap: 16px;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+.overlay h1 {
+    font-size: 38px;
+    font-weight: bold;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+    margin: 0;
+}
+
+.title-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 52px;
+}
+
+.splash {
+    position: absolute;
+    left: calc(100% - 10px);
+    top: calc(100% + 4px);
+    transform-origin: center;
+    color: #ffe08a;
+    font-weight: bold;
+    font-size: 12px;
+    white-space: nowrap;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    animation: splashPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes splashPulse {
+    from { transform: translate(-50%, -50%) rotate(-14deg) scale(1); }
+    to   { transform: translate(-50%, -50%) rotate(-14deg) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .splash {
+        animation: none;
+        transform: translate(-50%, -50%) rotate(-14deg);
+    }
+}
+
+.list-overlay h1 {
+    font-size: 26px;
+}
+
+.overlay p {
+    font-size: 16px;
+    color: #ddd;
+    margin: 0;
+}
+
+.overlay .score-lines {
+    font-size: 18px;
+    color: #ffe08a;
+    font-weight: bold;
+    margin: 0;
+}
+
+.overlay button {
+    margin-top: 8px;
+    padding: 10px 28px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #4488dd;
+    color: #fff;
+    transition: background 0.15s;
+}
+
+.overlay button:hover {
+    background: #66aaff;
+}
+
+.game-hint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #aaa;
+}
+
+/* Main menu: two-button column */
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Achievements list */
+.achievements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 320px;
+    max-height: 415px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+}
+
+.achievement {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 4px solid transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.achievement.unlocked {
+    opacity: 1;
+    border-left-color: #66ddaa;
+    background: rgba(102, 221, 170, 0.12);
+}
+
+.achievement.locked {
+    opacity: 0.7;
+    color: #ddd;
+}
+
+.achievement strong {
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.achievement span {
+    font-size: 12px;
+    color: #ccc;
+}
+
+/* Achievement icon + title flex row */
+.achievement-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.achievement-title-row canvas {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* Upgrade item (mirrors .achievement structure) */
+.upgrade-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.upgrade-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.upgrade-tier {
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+}
+
+.upgrade-title-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.upgrade-header .upgrade-icon {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.upgrade-buy-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.upgrade-cost {
+    font-size: 12px;
+    color: #ffd700;
+}
+
+.upgrade-buy-row button {
+    margin-top: 0;
+    padding: 4px 14px;
+    font-size: 13px;
+}
+
+/* Fully upgraded badge */
+.fully-upgraded {
+    font-size: 11px;
+    font-weight: bold;
+    color: #ff4444;
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 6px rgba(255, 68, 68, 0.6);
+    white-space: nowrap;
+}
+
+/* Gold display in HUD */
+.gold-hud {
+    color: #ffd700;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.gold-icon { vertical-align: -2px; margin-right: 3px; }
+
+/* Toast notification — anchored near top-center of the game canvas */
+.toast {
+    position: absolute;
+    top: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 40, 0.92);
+    color: #ffe08a;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 8px 18px;
+    border-radius: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 30;
+    animation: toastFadeIn 0.2s ease;
+}
+
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.settings-gear {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    z-index: 25;
+    pointer-events: auto;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 44px;
+    cursor: pointer;
+}
+
+.settings-warning {
+    color: #ff9999;
+}
+
+.version-label { position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.5px; pointer-events: none; }

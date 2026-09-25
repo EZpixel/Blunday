@@ -1,0 +1,36 @@
+export const SPLASHES = Object.freeze([
+    'Get Rich or Fall Trying!',
+    'Made on a Monday!',
+    'Gravity is a scam!',
+    'Also try touching grass!',
+    'Blue and proud!',
+    'Now with 100% more cube!',
+    'Sproing!',
+    'Toe beans included!',
+    'Case of the Mondays!',
+    'Up is the only way!',
+    'Spaghetti legs, activate!',
+    'Ctrl+Z your mistakes!',
+    'Don\'t look down!',
+    'Coins don\'t grow on platforms!',
+    'Umbrella not rated for this altitude!',
+    'Cubes can\'t jump. Watch me.',
+    'Definitely not a doodle!',
+    'Falling is just flying downward!',
+    'Four-leaf clovers sold separately!',
+    'Have you tried not falling?',
+    'It\'s always Monday somewhere!',
+    'Thicc fuel tank energy!',
+    'Jump first, think later!',
+    'Squares > circles!',
+    '10x gold. Legally.',
+    'Red gems are just angry coins!',
+    'The floor is optional!',
+    'Blunday > Sunday!',
+    'Emergency exit rocket included!',
+    'No cubes were harmed!',
+]);
+
+export function randomSplash() {
+    return SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+}
