@@ -9,7 +9,15 @@ import AchievementsView from './AchievementsView.jsx';
 import UpgradesView from './UpgradesView.jsx';
 import SettingsView from './SettingsView.jsx';
 import SettingsButton from './SettingsButton.jsx';
+import MoveHint from './MoveHint.jsx';
+import FullscreenButton from './FullscreenButton.jsx';
 import { installClickSounds } from '../game/audio.js';
+
+const MOVE_HINT_MS = 10000;
+
+// The UI is laid out once at this width (1080x2400 / 2.5) and scaled to fit the
+// game area, so it looks the same on every screen, just larger or smaller.
+const UI_WIDTH = 432;
 
 export default function App() {
     const canvasRef = useRef(null);
@@ -30,12 +38,32 @@ export default function App() {
     const [view, setView] = useState('menu');
     const [toast, setToast] = useState(null);
     const [saveToast, setSaveToast] = useState(false);
+    // Start time of a first-ever run (no high score yet); drives the move hint
+    const [moveHintRun, setMoveHintRun] = useState(null);
 
     // viewRef lets the empty-deps keydown effect read current view without re-subscribing
     const viewRef = useRef('menu');
     const wrapperRef = useRef(null);
+    const uiRef = useRef(null);
     useEffect(() => { viewRef.current = view; }, [view]);
     useEffect(() => installClickSounds(wrapperRef.current), []);
+
+    // ── UI scaling — keep the UI layer covering the game area at any size ────
+    useEffect(() => {
+        const wrapper = wrapperRef.current;
+        const ui = uiRef.current;
+        if (!wrapper || !ui) return;
+        function fitUi() {
+            const scale = wrapper.clientWidth / UI_WIDTH;
+            if (!scale) return; // not laid out yet
+            ui.style.setProperty('--ui-scale', scale);
+            ui.style.height = `${wrapper.clientHeight / scale}px`;
+        }
+        fitUi();
+        const observer = new ResizeObserver(fitUi);
+        observer.observe(wrapper);
+        return () => observer.disconnect();
+    }, []);
 
     // ── Main menu handler ─────────────────────────────────────────────────────
     function handleMainMenu() {
@@ -63,6 +91,7 @@ export default function App() {
         setView('menu');
         viewRef.current = 'menu';
         engine.reset();  // clears state, emits idle snapshot
+        setMoveHintRun(engine.getSnapshot().highScore === 0 ? Date.now() : null);
         engine.start();  // sets gameState='running', starts RAF loop
     }
 
@@ -187,6 +216,14 @@ export default function App() {
         }
     }, [toast]);
 
+    // ── Move hint — visible for the first 10s of a run while there's no high score
+    useEffect(() => {
+        if (moveHintRun !== null) {
+            const t = setTimeout(() => setMoveHintRun(null), MOVE_HINT_MS);
+            return () => clearTimeout(t);
+        }
+    }, [moveHintRun]);
+
     // ── Save toast — show when jetpack revive activates ───────────────────────
     useEffect(() => {
         if (snapshot.justSaved) {
@@ -206,29 +243,39 @@ export default function App() {
     return (
         <div className="game-wrapper" ref={wrapperRef}>
             <GameCanvas ref={canvasRef} />
-            <ScoreHUD score={score} highScore={highScore} gold={gold} />
-            {gameState === 'idle' && view === 'menu' && <SettingsButton onClick={() => setView('settings')} />}
-            {activeEffects.length > 0 && <EffectBar effects={activeEffects} />}
-            {gameState === 'idle' && (
-                view === 'achievements'
-                    ? <AchievementsView onBack={() => setView('menu')} />
-                    : view === 'upgrades'
-                        ? <UpgradesView onBack={() => setView('menu')} />
-                        : view === 'settings'
-                            ? <SettingsView onBack={() => setView('menu')} />
-                            : <StartOverlay onPlay={handleStart} onAchievements={() => setView('achievements')} onUpgrades={() => setView('upgrades')} />
-            )}
-            {gameState === 'gameover' && (
-                <GameOverOverlay
-                    score={score}
-                    highScore={highScore}
-                    onRestart={handleStart}
-                    onUpgrades={handleGameOverUpgrades}
-                    onMenu={handleMainMenu}
-                />
-            )}
-            {toast && <div className="toast">Achievement unlocked: {toast.title}</div>}
-            {saveToast && <div className="toast">Saved by your Ctrl+Z Jetpack!</div>}
+            <div className="ui-layer" ref={uiRef}>
+                <ScoreHUD score={score} highScore={highScore} gold={gold} />
+                {/* Title and game over screens share the settings + full screen buttons */}
+                {(gameState === 'idle' || gameState === 'gameover') && view === 'menu' && (
+                    <>
+                        <SettingsButton onClick={() => setView('settings')} />
+                        <FullscreenButton />
+                    </>
+                )}
+                {activeEffects.length > 0 && <EffectBar effects={activeEffects} />}
+                <MoveHint visible={gameState === 'running' && moveHintRun !== null} />
+                {gameState === 'idle' && (
+                    view === 'achievements'
+                        ? <AchievementsView onBack={() => setView('menu')} />
+                        : view === 'upgrades'
+                            ? <UpgradesView onBack={() => setView('menu')} />
+                            : view === 'settings'
+                                ? <SettingsView onBack={() => setView('menu')} />
+                                : <StartOverlay onPlay={handleStart} onAchievements={() => setView('achievements')} onUpgrades={() => setView('upgrades')} />
+                )}
+                {gameState === 'gameover' && view === 'settings' && <SettingsView onBack={() => setView('menu')} />}
+                {gameState === 'gameover' && view !== 'settings' && (
+                    <GameOverOverlay
+                        score={score}
+                        highScore={highScore}
+                        onRestart={handleStart}
+                        onUpgrades={handleGameOverUpgrades}
+                        onMenu={handleMainMenu}
+                    />
+                )}
+                {toast && <div className="toast">Achievement unlocked: {toast.title}</div>}
+                {saveToast && <div className="toast">Saved by your Ctrl+Z Jetpack!</div>}
+            </div>
         </div>
     );
 }

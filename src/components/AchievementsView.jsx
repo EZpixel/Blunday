@@ -7,12 +7,12 @@ export default function AchievementsView({ onBack }) {
 
     return (
         <div className="overlay list-overlay">
-            <h1>Achievements</h1>
+            <h1 className="fancy-heading achievements-heading">Achievements</h1>
             <ul className="achievements-list">
                 {achievements.map(a => (
                     <li key={a.id} className={'achievement ' + (a.unlocked ? 'unlocked' : 'locked')}>
                         <div className="achievement-title-row">
-                            <AchievementIcon icon={a.icon} />
+                            <AchievementIcon icon={a.icon} size={28} />
                             <strong>{a.title}</strong>
                         </div>
                         <span>{a.description}</span>

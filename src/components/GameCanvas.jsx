@@ -1,12 +1,13 @@
 import { forwardRef } from 'react';
+import { RENDER_WIDTH, RENDER_HEIGHT } from '../game/engine.js';
 
 const GameCanvas = forwardRef(function GameCanvas(_props, ref) {
     return (
         <canvas
             ref={ref}
             id="game"
-            width={400}
-            height={600}
+            width={RENDER_WIDTH}
+            height={RENDER_HEIGHT}
         />
     );
 });

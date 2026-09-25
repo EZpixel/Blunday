@@ -9,7 +9,7 @@ const DEFAULTS = Object.freeze({
     sfxOn:        true,
     musicVolume:  1,
     musicOn:      true,
-    experimental: false,
+    experimental: true,
 });
 
 function loadSettings() {

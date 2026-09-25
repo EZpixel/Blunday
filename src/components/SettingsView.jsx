@@ -57,15 +57,17 @@ export default function SettingsView({ onBack }) {
     useEffect(() => subscribeSettings(setSettings), []);
 
     return (
-        <div className="overlay list-overlay">
-            <h1>Settings</h1>
+        <div className="overlay list-overlay settings-overlay">
+            <div className="overlay-header">
+                <h1 className="fancy-heading settings-heading">Settings</h1>
 
-            <section className="settings-section">
-                <h2>Sound</h2>
-                <VolumeSlider label="Master" channel="master" settings={settings} />
-                <VolumeSlider label="SFX"    channel="sfx"    settings={settings} />
-                <VolumeSlider label="Music"  channel="music"  settings={settings} />
-            </section>
+                <section className="settings-section">
+                    <h2>Sound</h2>
+                    <VolumeSlider label="Master" channel="master" settings={settings} />
+                    <VolumeSlider label="SFX"    channel="sfx"    settings={settings} />
+                    <VolumeSlider label="Music"  channel="music"  settings={settings} />
+                </section>
+            </div>
 
             <section className="settings-section">
                 <h2>Experimental</h2>
@@ -86,7 +88,7 @@ export default function SettingsView({ onBack }) {
                 </div>
             </section>
 
-            <section className="settings-section">
+            <section className="settings-section settings-footer">
                 <h2>Progress</h2>
                 {confirming ? (
                     <>

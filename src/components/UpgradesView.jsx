@@ -17,7 +17,7 @@ export default function UpgradesView({ onBack }) {
 
     return (
         <div className="overlay list-overlay">
-            <h1>Upgrades</h1>
+            <h1 className="fancy-heading upgrades-heading">Upgrades</h1>
             <p className="gold-hud"><GoldIcon />{gold}</p>
             <ul className="achievements-list">
                 {UPGRADES.map(u => {

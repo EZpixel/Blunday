@@ -16,14 +16,20 @@ import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoi
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+// The canvas is rendered at a phone-native 1080x2400 (9:20), but gameplay runs in
+// a 400-unit-wide logical world so physics tuning is independent of resolution.
+export const RENDER_WIDTH  = 1080;
+export const RENDER_HEIGHT = 2400;
 const CANVAS_WIDTH    = 400;
-const CANVAS_HEIGHT   = 600;
+const RENDER_SCALE    = RENDER_WIDTH / CANVAS_WIDTH;
+const CANVAS_HEIGHT   = RENDER_HEIGHT / RENDER_SCALE;
 const GRAVITY         = 0.4;
 const BOUNCE_VELOCITY = -12;
 const PLAYER_WIDTH    = 40;
 const PLAYER_HEIGHT   = 40;
 const MOVE_SPEED      = 5;
 const PLATFORM_HEIGHT = 12;
+const COIN_OFFSET_Y   = 20; // gold pickup center above its platform's top (glyphs reach ~10 below center)
 const CAMERA_LINE     = 0.40 * CANVAS_HEIGHT;
 
 // Power-up constants
@@ -43,7 +49,10 @@ const LOOPED_EFFECT_SOUNDS = ['jetpack', 'umbrella'];
 const BG_CIRCLE_COUNT = 18;
 
 export function createGame(canvas) {
+    canvas.width  = RENDER_WIDTH;
+    canvas.height = RENDER_HEIGHT;
     const ctx = canvas.getContext('2d');
+    ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0); // draw in logical units
 
     // ─── Mutable state ────────────────────────────────────────────────────────
     let gameState = 'idle';
@@ -69,6 +78,7 @@ export function createGame(canvas) {
     let breakableExtraLandings = 0;
     let backupJetpackArmed = false;
     let justSaved = false;
+    const gaze = { x: 0, y: 0 }; // pupil direction, each axis -1..1
     const effectSoundVariant = {}; // one-shot power-up sound variant, kept while the effect is active
 
     // Parallax background circles (seeded once, not reset each run)
@@ -312,6 +322,7 @@ export function createGame(canvas) {
     // ─── Reset ────────────────────────────────────────────────────────────────
     function reset() {
         cameraY         = 0;
+        prevCameraY     = 0;
         score           = 0;
         coins           = 0;
         activeEffects   = {};
@@ -320,6 +331,8 @@ export function createGame(canvas) {
         stopAllLoops();
         gold            = getGold(); // upgrades bought in the menu may have spent gold
         dragTargetX     = null;
+        gaze.x          = 0;
+        gaze.y          = 0;
         scoreAchAwarded           = false;
         score30kAchAwarded        = false;
         score100kAchAwarded       = false;
@@ -436,9 +449,38 @@ export function createGame(canvas) {
         return null;
     }
 
+    // ─── Gaze ─────────────────────────────────────────────────────────────────
+    // The eyes track the nearest gold pickup in range; with none around they
+    // glance up while rising and down while falling. Eased so they glide.
+    const GAZE_RANGE = 320;
+    const GAZE_EASE  = 0.15;
+
+    function updateGaze() {
+        const eyeX = player.x + PLAYER_WIDTH / 2;
+        const eyeY = player.y + 14;
+        let targetX = 0;
+        let targetY = Math.max(-0.6, Math.min(0.6, player.velocityY * 0.06));
+        let bestDist = GAZE_RANGE * GAZE_RANGE;
+        for (const p of platforms) {
+            if (!p.coin || p.coin.collected) continue;
+            const dx = p.x + p.width / 2 - eyeX;
+            const dy = p.y - COIN_OFFSET_Y - eyeY;
+            const dist = dx * dx + dy * dy;
+            if (dist < bestDist) {
+                bestDist = dist;
+                const len = Math.sqrt(dist) || 1;
+                targetX = dx / len;
+                targetY = dy / len;
+            }
+        }
+        gaze.x += (targetX - gaze.x) * GAZE_EASE;
+        gaze.y += (targetY - gaze.y) * GAZE_EASE;
+    }
+
     // ─── Update ───────────────────────────────────────────────────────────────
     function update() {
         moveHorizontal();
+        updateGaze();
 
         // Move moving platforms
         for (const p of platforms) {
@@ -506,7 +548,7 @@ export function createGame(canvas) {
         for (const p of platforms) {
             if (!p.coin || p.coin.collected) continue;
             const coinX = p.x + p.width / 2 - 10; // centered 20px wide
-            const coinY = p.y - 46;
+            const coinY = p.y - COIN_OFFSET_Y - 10;
             const coinW = 20;
             const coinH = 20;
 
@@ -582,6 +624,11 @@ export function createGame(canvas) {
         }
         for (const type of LOOPED_EFFECT_SOUNDS) setLoop(type, !!activeEffects[type]);
 
+        // Star: gold sparkles drifting off the player
+        if (activeEffects.star && Math.random() < 0.25) {
+            spawnParticles('pickup', player.x + Math.random() * PLAYER_WIDTH, player.y + Math.random() * PLAYER_HEIGHT, 1);
+        }
+
         // Update particles
         particles = particles.filter(part => {
             part.x    += part.vx;
@@ -636,12 +683,17 @@ export function createGame(canvas) {
     // Glyphs are static, so each is drawn once onto an offscreen canvas and then
     // blitted with drawImage. Redrawing them every frame (paths, gradients and
     // fillText) was a large share of frame time on Firefox for Android.
+    // Sprites are rasterised at render resolution so they stay sharp when scaled.
+    // Sprites are rasterised at render resolution so they stay sharp when scaled.
     const SPRITE_SIZE = 48; // glyphs extend at most ~16px from their center
+    const SPRITE_PIXELS = Math.ceil(SPRITE_SIZE * RENDER_SCALE);
     function makeSprite(drawGlyph) {
         const sprite = document.createElement('canvas');
-        sprite.width  = SPRITE_SIZE;
-        sprite.height = SPRITE_SIZE;
-        drawGlyph(sprite.getContext('2d'), SPRITE_SIZE / 2, SPRITE_SIZE / 2);
+        sprite.width  = SPRITE_PIXELS;
+        sprite.height = SPRITE_PIXELS;
+        const sctx = sprite.getContext('2d');
+        sctx.scale(SPRITE_PIXELS / SPRITE_SIZE, SPRITE_PIXELS / SPRITE_SIZE);
+        drawGlyph(sctx, SPRITE_SIZE / 2, SPRITE_SIZE / 2);
         return sprite;
     }
     const SPRITES = {
@@ -655,15 +707,59 @@ export function createGame(canvas) {
         gem:      makeSprite(drawRedGemGlyph),
     };
 
-    // Whole-pixel positions avoid resampling the sprite, which is slower and blurrier
-    function drawSprite(name, cx, cy) {
-        const sprite = SPRITES[name];
-        if (sprite) ctx.drawImage(sprite, Math.round(cx - SPRITE_SIZE / 2), Math.round(cy - SPRITE_SIZE / 2));
+    // Soft radial glows, pre-rendered once because building a radial gradient
+    // every frame is slow on mobile browsers. rgb is "r,g,b".
+    function makeGlowSprite(size, rgb, strength) {
+        const glow = document.createElement('canvas');
+        glow.width  = Math.ceil(size * RENDER_SCALE);
+        glow.height = glow.width;
+        const gctx = glow.getContext('2d');
+        const r    = glow.width / 2;
+        const grad = gctx.createRadialGradient(r, r, 0, r, r, r);
+        grad.addColorStop(0,    `rgba(${rgb},${strength})`);
+        grad.addColorStop(0.45, `rgba(${rgb},${strength * 0.45})`);
+        grad.addColorStop(1,    `rgba(${rgb},0)`);
+        gctx.fillStyle = grad;
+        gctx.fillRect(0, 0, glow.width, glow.height);
+        return glow;
     }
 
-    function drawPowerUpIcon(pu, platform) {
-        const cx = platform.x + platform.width / 2;
-        const cy = platform.y - cameraY - 16; // center of icon area above platform (screen-space)
+    // Star power-up aura around the player
+    const GLOW_SIZE  = 110;
+    const glowSprite = makeGlowSprite(GLOW_SIZE, '255,210,60', 0.75);
+
+    // Pickup glows on platforms: every power-up and the red gem, in its own color
+    const PICKUP_GLOW_SIZE = 46;
+    const PICKUP_GLOWS = {
+        jetpack:  makeGlowSprite(PICKUP_GLOW_SIZE, '255,120,50',  0.6),
+        boots:    makeGlowSprite(PICKUP_GLOW_SIZE, '180,110,255', 0.6),
+        umbrella: makeGlowSprite(PICKUP_GLOW_SIZE, '255,90,170',  0.6),
+        star:     makeGlowSprite(PICKUP_GLOW_SIZE, '255,215,60',  0.6),
+        gem:      makeGlowSprite(PICKUP_GLOW_SIZE, '255,50,50',   0.6),
+    };
+
+    // Slow pulse; the per-pickup phase (from its world y) keeps them out of sync
+    function drawPickupGlow(name, cx, cy, phase, now) {
+        const glow = PICKUP_GLOWS[name];
+        if (!glow) return;
+        ctx.globalAlpha = 0.7 + 0.3 * Math.sin(now * 0.004 + phase);
+        ctx.drawImage(glow, cx - PICKUP_GLOW_SIZE / 2, cy - PICKUP_GLOW_SIZE / 2, PICKUP_GLOW_SIZE, PICKUP_GLOW_SIZE);
+        ctx.globalAlpha = 1;
+    }
+
+    // Whole-device-pixel positions avoid resampling the sprite, which is slower and blurrier
+    function snap(v) {
+        return Math.round(v * RENDER_SCALE) / RENDER_SCALE;
+    }
+    function drawSprite(name, cx, cy) {
+        const sprite = SPRITES[name];
+        if (sprite) ctx.drawImage(sprite, snap(cx - SPRITE_SIZE / 2), snap(cy - SPRITE_SIZE / 2), SPRITE_PIXELS / RENDER_SCALE, SPRITE_PIXELS / RENDER_SCALE);
+    }
+
+    function drawPowerUpIcon(pu, platform, platX, camY, now) {
+        const cx = platX + platform.width / 2;
+        const cy = platform.y - camY - 16; // center of icon area above platform (screen-space)
+        drawPickupGlow(pu.type, cx, cy, platform.y * 0.05, now);
         drawSprite(pu.type, cx, cy);
     }
 
@@ -691,14 +787,64 @@ export function createGame(canvas) {
         ctx.restore();
     }
 
-    function draw() {
+    // Umbrella held over the player's head: canopy with a scalloped rim on a pole
+    // whose base (at the player's top center) is the pivot for a gentle sway.
+    const UMBRELLA_RADIUS = 28;
+    const UMBRELLA_POLE   = 30; // pole base to canopy rim
+    function drawHeldUmbrella(baseX, baseY, sway) {
+        const R = UMBRELLA_RADIUS;
+        ctx.save();
+        ctx.translate(baseX, baseY);
+        ctx.rotate(sway);
+
+        // Pole (its lower end is hidden behind the player's body)
+        ctx.strokeStyle = '#8b5a2b';
+        ctx.lineWidth   = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 8);
+        ctx.lineTo(0, -UMBRELLA_POLE - R + 2);
+        ctx.stroke();
+
+        // Canopy: dome, then four scallops back along the rim
+        ctx.translate(0, -UMBRELLA_POLE);
+        ctx.beginPath();
+        ctx.moveTo(-R, 0);
+        ctx.arc(0, 0, R, Math.PI, 0, false);
+        for (let i = 0; i < 4; i++) {
+            ctx.arc(R - R / 4 - i * (R / 2), 0, R / 4, 0, Math.PI, true);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#cc4488';
+        ctx.fill();
+        ctx.strokeStyle = '#7a2250';
+        ctx.lineWidth   = 1.5;
+        ctx.stroke();
+
+        // Ribs from the tip to each scallop joint
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth   = 1.2;
+        ctx.beginPath();
+        for (const x of [-R / 2, 0, R / 2]) {
+            ctx.moveTo(0, -R);
+            ctx.quadraticCurveTo(x * 0.9, -R * 0.45, x, -R / 4);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // alpha (0..1) is how far the renderer is between the previous physics step
+    // and the current one; positions are blended so high-refresh screens show
+    // in-between frames instead of repeating each 60Hz step.
+    function draw(alpha, now = 0) {
+        const camY = lerp(prevCameraY, cameraY, alpha);
+
         // ── Background gradient ──
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
         // ── Parallax soft circles (stars/clouds) ──
         for (const c of bgCircles) {
-            const worldY  = c.yOffset + cameraY * c.speed;
+            const worldY  = c.yOffset + camY * c.speed;
             const screenY = ((worldY % (CANVAS_HEIGHT * 2)) + CANVAS_HEIGHT * 2) % (CANVAS_HEIGHT * 2);
             ctx.beginPath();
             ctx.arc(c.x, screenY - CANVAS_HEIGHT / 2, c.radius, 0, Math.PI * 2);
@@ -708,73 +854,97 @@ export function createGame(canvas) {
 
         // ── Platforms ──
         for (const platform of platforms) {
-            const screenY = platform.y - cameraY;
+            const screenY = platform.y - camY;
+            const platX   = interp(platform.prevX, platform.x, alpha);
 
             if (platform.type === 'moving') {
                 // Blue sheen
-                fillPlatform(movingPlatformGrad, platform.x, screenY, platform.width);
+                fillPlatform(movingPlatformGrad, platX, screenY, platform.width);
                 // Highlight
                 ctx.fillStyle = 'rgba(255,255,255,0.25)';
-                ctx.fillRect(platform.x + 4, screenY + 1, platform.width - 8, 3);
+                ctx.fillRect(platX + 4, screenY + 1, platform.width - 8, 3);
             } else if (platform.type === 'breakable') {
                 // Brown cracked look
-                fillPlatform(breakablePlatformGrad, platform.x, screenY, platform.width);
+                fillPlatform(breakablePlatformGrad, platX, screenY, platform.width);
                 // Crack line
                 ctx.strokeStyle = '#3a1a08';
                 ctx.lineWidth   = 1.5;
                 ctx.beginPath();
-                ctx.moveTo(platform.x + platform.width * 0.35, screenY + 1);
-                ctx.lineTo(platform.x + platform.width * 0.45, screenY + 6);
-                ctx.lineTo(platform.x + platform.width * 0.55, screenY + 3);
+                ctx.moveTo(platX + platform.width * 0.35, screenY + 1);
+                ctx.lineTo(platX + platform.width * 0.45, screenY + 6);
+                ctx.lineTo(platX + platform.width * 0.55, screenY + 3);
                 ctx.stroke();
             } else {
                 // Static: green with grass-lip
-                fillPlatform(staticPlatformGrad, platform.x, screenY, platform.width);
+                fillPlatform(staticPlatformGrad, platX, screenY, platform.width);
                 // Grass lip highlight
                 ctx.fillStyle = 'rgba(180,255,120,0.45)';
-                ctx.fillRect(platform.x + 3, screenY + 1, platform.width - 6, 3);
+                ctx.fillRect(platX + 3, screenY + 1, platform.width - 6, 3);
             }
 
             // Power-up icon
             if (platform.powerUp && !platform.powerUp.collected) {
-                drawPowerUpIcon(platform.powerUp, platform);
+                drawPowerUpIcon(platform.powerUp, platform, platX, camY, now);
             }
 
-            // Coin icon (offset above power-up slot so they don't stack)
+            // Gold icon (a platform never has both gold and a power-up)
             if (platform.coin && !platform.coin.collected) {
-                const coinCx = platform.x + platform.width / 2;
-                const coinCy = platform.y - cameraY - 36;
+                const coinCx = platX + platform.width / 2;
+                const coinCy = platform.y - camY - COIN_OFFSET_Y;
+                drawPickupGlow(platform.coin.type, coinCx, coinCy, platform.y * 0.05, now);
                 drawSprite(platform.coin.type, coinCx, coinCy);
             }
         }
 
         // ── Player ──
-        const playerScreenY = player.y - cameraY;
+        // Screen wrap teleports the player, so don't blend across it
+        const px = Math.abs(player.x - player.prevX) > CANVAS_WIDTH / 2 ? player.x : interp(player.prevX, player.x, alpha);
+        const playerScreenY = interp(player.prevY, player.y, alpha) - camY;
 
         // Squash/stretch based on velocity
-        const stretchFactor = Math.max(0.7, Math.min(1.3, 1 + player.velocityY * 0.02));
+        const stretchFactor = Math.max(0.7, Math.min(1.3, 1 + interp(player.prevVelocityY, player.velocityY, alpha) * 0.02));
         const drawH = PLAYER_HEIGHT * stretchFactor;
         const drawY = playerScreenY + PLAYER_HEIGHT - drawH; // anchor bottom
 
+        // Star: pulsing golden aura behind the player
+        const starPulse = 0.5 + 0.5 * Math.sin(now * 0.008);
+        if (activeEffects.star) {
+            const size = (0.8 + 0.15 * starPulse) * GLOW_SIZE;
+            ctx.globalAlpha = 0.65 + 0.35 * starPulse;
+            ctx.drawImage(glowSprite, px + PLAYER_WIDTH / 2 - size / 2, drawY + drawH / 2 - size / 2, size, size);
+            ctx.globalAlpha = 1;
+        }
+
+        // Umbrella: held overhead, drawn before the body so the pole tucks behind it
+        if (activeEffects.umbrella) {
+            drawHeldUmbrella(px + PLAYER_WIDTH / 2, drawY, 0.08 * Math.sin(now * 0.004));
+        }
+
         // Body gradient
-        const bodyGrad = ctx.createLinearGradient(player.x, drawY, player.x + PLAYER_WIDTH, drawY + drawH);
+        const bodyGrad = ctx.createLinearGradient(px, drawY, px + PLAYER_WIDTH, drawY + drawH);
         bodyGrad.addColorStop(0, '#66aaff');
         bodyGrad.addColorStop(1, '#2255bb');
         ctx.fillStyle = bodyGrad;
-        drawRoundRect(player.x, drawY, PLAYER_WIDTH, drawH, 6);
+        drawRoundRect(px, drawY, PLAYER_WIDTH, drawH, 6);
         ctx.fill();
+        if (activeEffects.star) {
+            // Gold outline, pulsing with the aura
+            ctx.strokeStyle = `rgba(255,215,60,${0.6 + 0.4 * starPulse})`;
+            ctx.lineWidth   = 2.5;
+            ctx.stroke();
+        }
 
         // Jetpack pack on player back (left side)
         if (activeEffects.jetpack) {
             ctx.fillStyle = '#cc4444';
             ctx.beginPath();
-            ctx.roundRect(player.x - 10, drawY + 4, 10, 22, 3);
+            ctx.roundRect(px - 10, drawY + 4, 10, 22, 3);
             ctx.fill();
             ctx.fillStyle = '#ffaa00';
             ctx.beginPath();
-            ctx.moveTo(player.x - 9, drawY + 26);
-            ctx.lineTo(player.x - 2, drawY + 26);
-            ctx.lineTo(player.x - 5, drawY + 34);
+            ctx.moveTo(px - 9, drawY + 26);
+            ctx.lineTo(px - 2, drawY + 26);
+            ctx.lineTo(px - 5, drawY + 34);
             ctx.closePath();
             ctx.fill();
         }
@@ -782,30 +952,33 @@ export function createGame(canvas) {
         // Spring boots on feet
         if (activeEffects.boots) {
             ctx.fillStyle = '#8844cc';
-            ctx.fillRect(player.x + 2, drawY + drawH, 14, 5);
-            ctx.fillRect(player.x + PLAYER_WIDTH - 16, drawY + drawH, 14, 5);
+            ctx.fillRect(px + 2, drawY + drawH, 14, 5);
+            ctx.fillRect(px + PLAYER_WIDTH - 16, drawY + drawH, 14, 5);
         }
 
         // Eyes
         ctx.fillStyle = '#fff';
-        ctx.fillRect(player.x + 8,  drawY + 10, 9, 9);
-        ctx.fillRect(player.x + 23, drawY + 10, 9, 9);
+        ctx.fillRect(px + 8,  drawY + 10, 9, 9);
+        ctx.fillRect(px + 23, drawY + 10, 9, 9);
+        // Pupils (4px) can shift 2.5px either way from the center of each 9px eye
+        const pupilX = gaze.x * 2.5;
+        const pupilY = gaze.y * 2.5;
         ctx.fillStyle = '#111';
-        ctx.fillRect(player.x + 10, drawY + 12, 4, 4);
-        ctx.fillRect(player.x + 25, drawY + 12, 4, 4);
+        ctx.fillRect(px + 10.5 + pupilX, drawY + 12.5 + pupilY, 4, 4);
+        ctx.fillRect(px + 25.5 + pupilX, drawY + 12.5 + pupilY, 4, 4);
 
         // Mouth (small curved line approximated by rect)
         ctx.fillStyle = '#334';
-        ctx.fillRect(player.x + 13, drawY + 24, 14, 2);
+        ctx.fillRect(px + 13, drawY + 24, 14, 2);
 
         // Feet/limbs (simple stubs)
         ctx.fillStyle = '#2255bb';
-        ctx.fillRect(player.x + 4,              drawY + drawH - 2, 10, 6);
-        ctx.fillRect(player.x + PLAYER_WIDTH - 14, drawY + drawH - 2, 10, 6);
+        ctx.fillRect(px + 4,              drawY + drawH - 2, 10, 6);
+        ctx.fillRect(px + PLAYER_WIDTH - 14, drawY + drawH - 2, 10, 6);
 
         // ── Particles ──
         for (const part of particles) {
-            const pScreenY = part.y - cameraY;
+            const pScreenY = interp(part.prevY, part.y, alpha) - camY;
             if (pScreenY < -20 || pScreenY > CANVAS_HEIGHT + 20) continue;
 
             const t = part.life / part.maxLife; // 1 = fresh, 0 = dead
@@ -824,8 +997,29 @@ export function createGame(canvas) {
                 ctx.fillStyle = `rgba(${r},${g},${b},${t})`;
             }
             ctx.beginPath();
-            ctx.arc(part.x, pScreenY, part.size * t, 0, Math.PI * 2);
+            ctx.arc(interp(part.prevX, part.x, alpha), pScreenY, part.size * t, 0, Math.PI * 2);
             ctx.fill();
+        }
+    }
+
+    // ─── Interpolation ────────────────────────────────────────────────────────
+    // Positions as of the previous physics step. Objects created during a step
+    // have no previous position yet, so interp() falls back to the current one.
+    let prevCameraY = 0;
+
+    function interp(prev, curr, alpha) {
+        return prev === undefined ? curr : lerp(prev, curr, alpha);
+    }
+
+    function savePreviousPositions() {
+        prevCameraY          = cameraY;
+        player.prevX         = player.x;
+        player.prevY         = player.y;
+        player.prevVelocityY = player.velocityY;
+        for (const p of platforms) p.prevX = p.x;
+        for (const part of particles) {
+            part.prevX = part.x;
+            part.prevY = part.y;
         }
     }
 
@@ -850,6 +1044,8 @@ export function createGame(canvas) {
 
         let steps = 0;
         while (accumulator >= STEP_MS - STEP_TOLERANCE_MS && steps < MAX_STEPS_PER_FRAME) {
+            // Always snapshot, so once the game stops, previous == current and nothing drifts
+            savePreviousPositions();
             if (gameState === 'running') update();
             accumulator -= STEP_MS;
             steps++;
@@ -857,7 +1053,8 @@ export function createGame(canvas) {
         if (steps === MAX_STEPS_PER_FRAME) accumulator = 0;
         if (steps > 0) emitIfChanged();
 
-        draw();
+        // The accumulator can dip slightly negative (see STEP_TOLERANCE_MS)
+        draw(Math.min(Math.max(accumulator / STEP_MS, 0), 1), now);
         rafId = requestAnimationFrame(loop);
     }
 

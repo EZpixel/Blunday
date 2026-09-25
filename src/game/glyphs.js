@@ -40,25 +40,37 @@ export function drawJetpackGlyph(ctx, cx, cy) {
     ctx.restore();
 }
 
+// One spring boot: shaft + toe pointing right, with a zigzag spring under the sole.
+// x0 is the heel's left edge; the boot spans x0..x0+8.
+function _drawSpringBoot(ctx, x0) {
+    // Spring
+    ctx.strokeStyle = '#ccaaff';
+    ctx.lineWidth   = 1.5;
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0 + 4, 2);
+    for (let i = 0; i < 4; i++) ctx.lineTo(i % 2 === 0 ? x0 + 1.5 : x0 + 6.5, 3.5 + i * 1.6);
+    ctx.lineTo(x0 + 4, 9.5);
+    ctx.stroke();
+    // Shaft and foot
+    ctx.fillStyle = '#8844cc';
+    ctx.beginPath();
+    ctx.roundRect(x0, -9, 5, 10, 1.5);
+    ctx.roundRect(x0, -3, 8, 4, 2);
+    ctx.fill();
+    // Cuff
+    ctx.fillStyle = '#aa77ee';
+    ctx.fillRect(x0, -9, 5, 2);
+    // Sole
+    ctx.fillStyle = '#55288a';
+    ctx.fillRect(x0, 0.5, 8, 1.5);
+}
+
 export function drawBootsGlyph(ctx, cx, cy) {
     ctx.save();
     ctx.translate(cx, cy);
-    // Boot body
-    ctx.fillStyle = '#8844cc';
-    ctx.beginPath();
-    ctx.roundRect(-6, -4, 12, 10, 2);
-    ctx.fill();
-    // Spring coils
-    ctx.strokeStyle = '#ccaaff';
-    ctx.lineWidth   = 2;
-    ctx.beginPath();
-    ctx.moveTo(-4, 6);
-    ctx.lineTo(4, 6);
-    ctx.moveTo(-3, 8);
-    ctx.lineTo(3, 8);
-    ctx.moveTo(-2, 10);
-    ctx.lineTo(2, 10);
-    ctx.stroke();
+    _drawSpringBoot(ctx, -10);
+    _drawSpringBoot(ctx, 2); // 4px gap keeps the pair distinct at small sizes
     ctx.restore();
 }
 
