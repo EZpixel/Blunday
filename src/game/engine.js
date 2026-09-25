@@ -737,8 +737,26 @@ export function createGame(canvas) {
     }
 
     // ─── Game Loop ────────────────────────────────────────────────────────────
-    function loop() {
-        if (gameState === 'running') update();
+    // Fixed 60Hz timestep: update() is tuned per-frame, so run it at a constant
+    // rate regardless of display refresh rate (120/144Hz screens ran too fast).
+    const STEP_MS = 1000 / 60;
+    const MAX_STEPS_PER_FRAME = 5; // avoid spiral of death after tab switches
+    let lastTime = null;
+    let accumulator = 0;
+
+    function loop(now) {
+        if (lastTime === null) lastTime = now;
+        accumulator += now - lastTime;
+        lastTime = now;
+
+        let steps = 0;
+        while (accumulator >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
+            if (gameState === 'running') update();
+            accumulator -= STEP_MS;
+            steps++;
+        }
+        if (steps === MAX_STEPS_PER_FRAME) accumulator = 0;
+
         draw();
         rafId = requestAnimationFrame(loop);
     }
@@ -765,6 +783,8 @@ export function createGame(canvas) {
         if (rafId !== null) {
             cancelAnimationFrame(rafId);
             rafId = null;
+            lastTime = null;
+            accumulator = 0;
         }
     }
 
