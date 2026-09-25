@@ -2,6 +2,7 @@ export function clearSaveData() {
     try {
         localStorage.removeItem('blundayHighScore');
         localStorage.removeItem('blundayGold');
+        localStorage.removeItem('blundayGoldEarned');
         localStorage.removeItem('blundayUpgrades');
         localStorage.removeItem('blundayAchievements');
     } catch (_) {}

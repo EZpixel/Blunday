@@ -1,5 +1,5 @@
 import { unlock } from './achievements.js';
-import { getGold, addGold } from './wallet.js';
+import { getGold, addGold, getTotalEarned } from './wallet.js';
 import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
 import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawUmbrellaGlyph } from './glyphs.js';
 
@@ -54,6 +54,7 @@ export function createGame(canvas) {
     let scoreAchAwarded = false;
     let score30kAchAwarded = false;
     let score100kAchAwarded = false;
+    let richAchAwarded = false; // skips further checks once unlocked this session
     let moveSpeedMultiplier = 1;
     let jetpackDurationMultiplier = 1;
     let starGoldMultiplier = 1;
@@ -83,6 +84,10 @@ export function createGame(canvas) {
     // ─── Pub-sub ──────────────────────────────────────────────────────────────
     const subscribers = new Set();
 
+    // In-memory copy of the wallet so emits don't hit localStorage every frame.
+    // Refreshed on reset(); updated whenever this engine adds gold.
+    let gold = getGold();
+
     function emit() {
         const snap = {
             gameState,
@@ -91,12 +96,31 @@ export function createGame(canvas) {
             coins,
             activeEffects: effectsSnapshot(),
             justUnlocked,
-            gold: getGold(),
+            gold,
             justSaved,
         };
+        lastEmitKey = snapshotKey();
         for (const fn of subscribers) fn(snap);
         justUnlocked = []; // each unlock visible in exactly one emitted snapshot
         justSaved = false; // save toast fires for exactly one snapshot
+    }
+
+    // Cheap fingerprint of everything the UI shows. Effect bars are quantised to
+    // 0.5% so they still animate smoothly without re-rendering React every frame.
+    let lastEmitKey = '';
+    function snapshotKey() {
+        let key = `${gameState}|${score}|${highScore}|${coins}|${gold}|${justUnlocked.length}|${justSaved}`;
+        for (const t in activeEffects) {
+            const e = activeEffects[t];
+            key += `|${t}:${Math.ceil((e.remaining / e.total) * 200)}`;
+        }
+        return key;
+    }
+
+    // Called once per rendered frame (not per physics step): only notify React
+    // when something visible actually changed.
+    function emitIfChanged() {
+        if (snapshotKey() !== lastEmitKey) emit();
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -144,6 +168,20 @@ export function createGame(canvas) {
             if (roll < acc) return GOLD_TYPES[i];
         }
         return GOLD_TYPES[0];
+    }
+
+    // Power-up hierarchy: only one of these can be active at a time. Picking up a
+    // higher- or equal-ranked one replaces the active one; a lower-ranked one
+    // can't be picked up. Star isn't listed, so it combines with any of them.
+    const EXCLUSIVE_RANK = { umbrella: 1, boots: 2, jetpack: 3 };
+
+    function activeExclusiveEffect() {
+        for (const t in EXCLUSIVE_RANK) if (activeEffects[t]) return t;
+        return null;
+    }
+
+    function clearExclusiveEffects() {
+        for (const t in EXCLUSIVE_RANK) delete activeEffects[t];
     }
 
     function effectsSnapshot() {
@@ -265,6 +303,7 @@ export function createGame(canvas) {
         activeEffects   = {};
         particles       = [];
         justUnlocked    = [];
+        gold            = getGold(); // upgrades bought in the menu may have spent gold
         dragTargetX     = null;
         scoreAchAwarded           = false;
         score30kAchAwarded        = false;
@@ -395,6 +434,8 @@ export function createGame(canvas) {
         }
 
         // Power-up collection: AABB check each frame
+        // Jetpack, boots and umbrella are mutually exclusive (see EXCLUSIVE_RANK);
+        // star stacks with anything.
         for (const p of platforms) {
             if (!p.powerUp || p.powerUp.collected) continue;
             const puX = p.x + p.width / 2 - 12; // centered 24px wide
@@ -409,6 +450,13 @@ export function createGame(canvas) {
                 player.y + PLAYER_HEIGHT > puY;
 
             if (overlap) {
+                const rank = EXCLUSIVE_RANK[p.powerUp.type];
+                if (rank) {
+                    // A stronger active power-up blocks the pickup; it stays on the platform
+                    const current = activeExclusiveEffect();
+                    if (current && EXCLUSIVE_RANK[current] > rank) continue;
+                    clearExclusiveEffects(); // equal or weaker: replaced by the new one
+                }
                 p.powerUp.collected = true;
                 if (p.powerUp.type === 'jetpack') {
                     const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
@@ -449,11 +497,12 @@ export function createGame(canvas) {
             if (coinOverlap) {
                 p.coin.collected = true;
                 const gain = activeEffects.star ? Math.round(p.coin.amount * starGoldMultiplier) : p.coin.amount;
-                addGold(gain);
+                gold = addGold(gain);
                 spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 6);
                 if (p.coin.type === 'bag')      tryUnlock('gold_bag');
                 else if (p.coin.type === 'bar') tryUnlock('gold_bar');
                 else if (p.coin.type === 'gem') tryUnlock('red_gem');
+                if (!richAchAwarded && getTotalEarned() >= 100000) { richAchAwarded = true; tryUnlock('gold_100000'); }
             }
         }
 
@@ -523,6 +572,7 @@ export function createGame(canvas) {
             if (backupJetpackArmed) {
                 backupJetpackArmed = false;
                 justSaved = true;
+                clearExclusiveEffects(); // jetpack outranks boots/umbrella
                 const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
                 activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
                 player.velocityY = JETPACK_MAX_SPEED;
@@ -533,8 +583,6 @@ export function createGame(canvas) {
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
             }
         }
-
-        emit();
     }
 
     // ─── Drawing helpers ──────────────────────────────────────────────────────
@@ -575,11 +623,31 @@ export function createGame(canvas) {
     }
 
     // ─── Draw ─────────────────────────────────────────────────────────────────
+
+    // Gradients are built once and reused: creating dozens per frame is slow on
+    // some mobile browsers (notably Firefox for Android). Platform gradients span
+    // y = 0..PLATFORM_HEIGHT, so platforms are drawn translated to their position.
+    function makeVerticalGradient(height, stops) {
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        for (const [offset, color] of stops) grad.addColorStop(offset, color);
+        return grad;
+    }
+    const bgGrad = makeVerticalGradient(CANVAS_HEIGHT, [[0, '#1a0a3c'], [1, '#2a4a7a']]);
+    const movingPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#6aacee'], [0.4, '#3a7ecc'], [1, '#1a4e9a']]);
+    const breakablePlatformGrad = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#c07048'], [1, '#7a3a18']]);
+    const staticPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#5eca5e'], [0.3, '#3ca03c'], [1, '#1e6a1e']]);
+
+    function fillPlatform(grad, x, y, w) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = grad;
+        drawRoundRect(0, 0, w, PLATFORM_HEIGHT, 4);
+        ctx.fill();
+        ctx.restore();
+    }
+
     function draw() {
         // ── Background gradient ──
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-        bgGrad.addColorStop(0, '#1a0a3c');
-        bgGrad.addColorStop(1, '#2a4a7a');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -599,24 +667,13 @@ export function createGame(canvas) {
 
             if (platform.type === 'moving') {
                 // Blue sheen
-                const grad = ctx.createLinearGradient(platform.x, screenY, platform.x, screenY + PLATFORM_HEIGHT);
-                grad.addColorStop(0, '#6aacee');
-                grad.addColorStop(0.4, '#3a7ecc');
-                grad.addColorStop(1, '#1a4e9a');
-                ctx.fillStyle = grad;
-                drawRoundRect(platform.x, screenY, platform.width, PLATFORM_HEIGHT, 4);
-                ctx.fill();
+                fillPlatform(movingPlatformGrad, platform.x, screenY, platform.width);
                 // Highlight
                 ctx.fillStyle = 'rgba(255,255,255,0.25)';
                 ctx.fillRect(platform.x + 4, screenY + 1, platform.width - 8, 3);
             } else if (platform.type === 'breakable') {
                 // Brown cracked look
-                const grad = ctx.createLinearGradient(platform.x, screenY, platform.x, screenY + PLATFORM_HEIGHT);
-                grad.addColorStop(0, '#c07048');
-                grad.addColorStop(1, '#7a3a18');
-                ctx.fillStyle = grad;
-                drawRoundRect(platform.x, screenY, platform.width, PLATFORM_HEIGHT, 4);
-                ctx.fill();
+                fillPlatform(breakablePlatformGrad, platform.x, screenY, platform.width);
                 // Crack line
                 ctx.strokeStyle = '#3a1a08';
                 ctx.lineWidth   = 1.5;
@@ -627,13 +684,7 @@ export function createGame(canvas) {
                 ctx.stroke();
             } else {
                 // Static: green with grass-lip
-                const grad = ctx.createLinearGradient(platform.x, screenY, platform.x, screenY + PLATFORM_HEIGHT);
-                grad.addColorStop(0, '#5eca5e');
-                grad.addColorStop(0.3, '#3ca03c');
-                grad.addColorStop(1, '#1e6a1e');
-                ctx.fillStyle = grad;
-                drawRoundRect(platform.x, screenY, platform.width, PLATFORM_HEIGHT, 4);
-                ctx.fill();
+                fillPlatform(staticPlatformGrad, platform.x, screenY, platform.width);
                 // Grass lip highlight
                 ctx.fillStyle = 'rgba(180,255,120,0.45)';
                 ctx.fillRect(platform.x + 3, screenY + 1, platform.width - 6, 3);
@@ -756,6 +807,7 @@ export function createGame(canvas) {
             steps++;
         }
         if (steps === MAX_STEPS_PER_FRAME) accumulator = 0;
+        if (steps > 0) emitIfChanged();
 
         draw();
         rafId = requestAnimationFrame(loop);
@@ -806,7 +858,7 @@ export function createGame(canvas) {
             coins,
             activeEffects: effectsSnapshot(),
             justUnlocked,
-            gold: getGold(),
+            gold,
             justSaved,
         };
     }
