@@ -9,6 +9,7 @@ import AchievementsView from './AchievementsView.jsx';
 import UpgradesView from './UpgradesView.jsx';
 import SettingsView from './SettingsView.jsx';
 import SettingsButton from './SettingsButton.jsx';
+import { installClickSounds } from '../game/audio.js';
 
 export default function App() {
     const canvasRef = useRef(null);
@@ -34,6 +35,7 @@ export default function App() {
     const viewRef = useRef('menu');
     const wrapperRef = useRef(null);
     useEffect(() => { viewRef.current = view; }, [view]);
+    useEffect(() => installClickSounds(wrapperRef.current), []);
 
     // ── Main menu handler ─────────────────────────────────────────────────────
     function handleMainMenu() {

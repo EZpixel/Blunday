@@ -1,6 +1,8 @@
 import { unlock } from './achievements.js';
 import { getGold, addGold, getTotalEarned } from './wallet.js';
 import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
+import { playSfx, pickVariant, setLoop, stopAllLoops } from './audio.js';
+import { isExperimental } from './settings.js';
 import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawUmbrellaGlyph } from './glyphs.js';
 
 // ─── Coordinate Convention ───────────────────────────────────────────────────
@@ -34,6 +36,9 @@ const STAR_SCORE_BONUS         = 500;
 const STAR_DURATION_FRAMES     = 300;
 const UMBRELLA_DURATION_FRAMES = 300;
 
+// Power-ups whose sound loops for as long as the effect is active
+const LOOPED_EFFECT_SOUNDS = ['jetpack', 'umbrella'];
+
 // Parallax background circles
 const BG_CIRCLE_COUNT = 18;
 
@@ -64,6 +69,7 @@ export function createGame(canvas) {
     let breakableExtraLandings = 0;
     let backupJetpackArmed = false;
     let justSaved = false;
+    const effectSoundVariant = {}; // one-shot power-up sound variant, kept while the effect is active
 
     // Parallax background circles (seeded once, not reset each run)
     const bgCircles = Array.from({ length: BG_CIRCLE_COUNT }, () => ({
@@ -182,6 +188,14 @@ export function createGame(canvas) {
 
     function clearExclusiveEffects() {
         for (const t in EXCLUSIVE_RANK) delete activeEffects[t];
+    }
+
+    // Looped sounds are driven by the effect tick. One-shots pick a random
+    // variant per activation, and re-picking an active power-up reuses it.
+    function playPowerUpSound(type, alreadyActive) {
+        if (LOOPED_EFFECT_SOUNDS.includes(type)) return;
+        if (!alreadyActive || effectSoundVariant[type] === undefined) effectSoundVariant[type] = pickVariant(type);
+        playSfx(type, effectSoundVariant[type]);
     }
 
     function effectsSnapshot() {
@@ -303,6 +317,7 @@ export function createGame(canvas) {
         activeEffects   = {};
         particles       = [];
         justUnlocked    = [];
+        stopAllLoops();
         gold            = getGold(); // upgrades bought in the menu may have spent gold
         dragTargetX     = null;
         scoreAchAwarded           = false;
@@ -409,6 +424,7 @@ export function createGame(canvas) {
                         platform.broken = true;
                     }
                 }
+                playSfx(platform.broken ? 'wood' : 'jump');
 
                 return platform;
             }
@@ -450,6 +466,7 @@ export function createGame(canvas) {
                 player.y + PLAYER_HEIGHT > puY;
 
             if (overlap) {
+                const alreadyActive = !!activeEffects[p.powerUp.type];
                 const rank = EXCLUSIVE_RANK[p.powerUp.type];
                 if (rank) {
                     // A stronger active power-up blocks the pickup; it stays on the platform
@@ -458,6 +475,7 @@ export function createGame(canvas) {
                     clearExclusiveEffects(); // equal or weaker: replaced by the new one
                 }
                 p.powerUp.collected = true;
+                playPowerUpSound(p.powerUp.type, alreadyActive);
                 if (p.powerUp.type === 'jetpack') {
                     const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
                     activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
@@ -498,6 +516,7 @@ export function createGame(canvas) {
                 p.coin.collected = true;
                 const gain = activeEffects.star ? Math.round(p.coin.amount * starGoldMultiplier) : p.coin.amount;
                 gold = addGold(gain);
+                playSfx('coin');
                 spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 6);
                 if (p.coin.type === 'bag')      tryUnlock('gold_bag');
                 else if (p.coin.type === 'bar') tryUnlock('gold_bar');
@@ -557,6 +576,7 @@ export function createGame(canvas) {
             activeEffects[key].remaining--;
             if (activeEffects[key].remaining <= 0) delete activeEffects[key];
         }
+        for (const type of LOOPED_EFFECT_SOUNDS) setLoop(type, !!activeEffects[type]);
 
         // Update particles
         particles = particles.filter(part => {
@@ -580,6 +600,8 @@ export function createGame(canvas) {
                 tryUnlock('jetpack_save');
             } else {
                 gameState = 'gameover';
+                stopAllLoops();
+                playSfx(isExperimental() ? 'fart' : 'fall');
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
             }
         }
@@ -854,6 +876,7 @@ export function createGame(canvas) {
     }
 
     function stop() {
+        stopAllLoops();
         if (rafId !== null) {
             cancelAnimationFrame(rafId);
             rafId = null;

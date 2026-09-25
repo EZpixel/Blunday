@@ -40,6 +40,7 @@ export default function UpgradesView({ onBack }) {
                                 <div className="upgrade-buy-row">
                                     <span className="upgrade-cost">Next: {cost} <GoldIcon /></span>
                                     <button
+                                        data-sfx="upgrade"
                                         disabled={isMaxed || gold < cost}
                                         onClick={() => handleBuy(u.id)}
                                     >

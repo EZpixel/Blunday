@@ -494,3 +494,190 @@ body {
 }
 
 .version-label { position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.5px; pointer-events: none; }
+
+/* ── Settings screen ─────────────────────────────────────────────────────── */
+.settings-section {
+    width: 320px;
+    padding: 10px 12px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+}
+
+.settings-section h2 {
+    align-self: flex-start;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #ffe08a;
+    text-shadow: var(--outline-1), 0 2px 0 var(--ink);
+}
+
+.volume-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.overlay .volume-toggle {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.volume-toggle svg {
+    display: block;
+    filter: drop-shadow(0 2px 0 var(--ink));
+}
+
+.overlay .volume-row.off .volume-toggle {
+    background: linear-gradient(#777, #5c5c5c);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 3px 0 #3a3a3a, 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.volume-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.volume-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: var(--outline-1), 0 2px 0 var(--ink);
+}
+
+.volume-value {
+    font-size: 12px;
+    color: #ccc;
+}
+
+.volume-body input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    border: 2px solid var(--ink);
+    background: linear-gradient(90deg, #5b9cf0 var(--fill), rgba(255, 255, 255, 0.2) var(--fill));
+    cursor: pointer;
+    touch-action: pan-x;
+}
+
+.volume-row.off input[type="range"] {
+    opacity: 0.5;
+}
+
+.volume-body input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: #fff;
+    box-shadow: 0 2px 0 var(--ink);
+}
+
+.volume-body input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: #fff;
+    box-shadow: 0 2px 0 var(--ink);
+}
+
+.settings-switch-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-switch-row strong {
+    display: block;
+    font-size: 14px;
+    color: #fff;
+    text-shadow: var(--outline-1), 0 2px 0 var(--ink);
+}
+
+.settings-switch-row span {
+    font-size: 12px;
+    color: #ccc;
+}
+
+.overlay .settings-switch {
+    flex-shrink: 0;
+    width: 52px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border-radius: 14px;
+    background: linear-gradient(#777, #5c5c5c);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.4), 0 2px 0 #3a3a3a;
+}
+
+.overlay .settings-switch[aria-checked="true"] {
+    background: linear-gradient(#66ddaa, #3fb886);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.25), 0 2px 0 #23704f;
+}
+
+/* Keep the switch's own colors on hover (the generic button hover is blue) */
+.overlay .settings-switch:hover:not(:disabled) {
+    background: linear-gradient(#888, #6a6a6a);
+}
+
+.overlay .settings-switch[aria-checked="true"]:hover:not(:disabled) {
+    background: linear-gradient(#7ff0bf, #4fcb97);
+}
+
+.settings-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: #fff;
+    transition: transform 0.15s;
+}
+
+.settings-switch[aria-checked="true"] .settings-switch-knob {
+    transform: translateX(24px);
+}
+
+.overlay .settings-section > button {
+    margin-top: 0;
+}
+
+.settings-confirm-row {
+    display: flex;
+    gap: 10px;
+}
+
+.overlay .settings-confirm-row button {
+    margin-top: 0;
+    padding: 10px 16px;
+}
+
+.list-overlay .settings-warning {
+    font-size: 13px;
+    text-align: center;
+}

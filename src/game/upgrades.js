@@ -51,7 +51,7 @@ export const UPGRADES = Object.freeze([
     {
         id:            'powerUpFreq',
         icon:          '🎁',
-        title:         'Lucky Platforms',
+        title:         'Aura Farming',
         description:   'Jetpacks, boots, stars, and umbrellas spawn more often.',
         maxTier:       3,
         costs:         [150, 300, 600],

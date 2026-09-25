@@ -1,3 +1,5 @@
+import { playSfx } from './audio.js';
+
 const STORAGE_KEY = 'blundayAchievements';
 
 export const ACHIEVEMENTS = Object.freeze([
@@ -36,6 +38,7 @@ export function unlock(id) {
     if (map[id]) return null;
     map[id] = true;
     saveUnlocked(map);
+    playSfx('achievement');
     return ACHIEVEMENTS.find(a => a.id === id) || null;
 }
 
