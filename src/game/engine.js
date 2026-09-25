@@ -29,6 +29,8 @@ const PLAYER_WIDTH    = 40;
 const PLAYER_HEIGHT   = 40;
 const MOVE_SPEED      = 5;
 const PLATFORM_HEIGHT = 12;
+const PLATFORM_START_WIDTH     = 80;
+const PLATFORM_MIN_WIDTH_SCORE = 100000; // platforms are PLAYER_WIDTH wide from here on
 const COIN_OFFSET_Y   = 20; // gold pickup center above its platform's top (glyphs reach ~10 below center)
 const CAMERA_LINE     = 0.40 * CANVAS_HEIGHT;
 
@@ -216,25 +218,32 @@ export function createGame(canvas) {
     }
 
     // ─── Difficulty ───────────────────────────────────────────────────────────
+    // Platforms shrink smoothly with height, reaching the player's width at
+    // PLATFORM_MIN_WIDTH_SCORE and staying there.
+    function platformWidth(s) {
+        const t = Math.min(Math.max(s, 0) / PLATFORM_MIN_WIDTH_SCORE, 1);
+        return Math.round(lerp(PLATFORM_START_WIDTH, PLAYER_WIDTH, t));
+    }
+
     function getDifficulty(s) {
         if (s >= 5000) {
-            return { gapMin: 105, gapMax: 120, width: 50,  movingChance: 0.45, breakChance: 0.25,
+            return { gapMin: 105, gapMax: 120, movingChance: 0.45, breakChance: 0.25,
                      powerUpChance: 0.097, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
                      jetpackWeight: 2, bootsWeight: 3, starWeight: 5, umbrellaWeight: 3 };
         } else if (s >= 3000) {
-            return { gapMin: 100, gapMax: 115, width: 55,  movingChance: 0.35, breakChance: 0.15,
+            return { gapMin: 100, gapMax: 115, movingChance: 0.35, breakChance: 0.15,
                      powerUpChance: 0.072, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
                      jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
         } else if (s >= 1500) {
-            return { gapMin: 90,  gapMax: 110, width: 60,  movingChance: 0.20, breakChance: 0.00,
+            return { gapMin: 90,  gapMax: 110, movingChance: 0.20, breakChance: 0.00,
                      powerUpChance: 0.05, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
                      jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
         } else if (s >= 500) {
-            return { gapMin: 80,  gapMax: 100, width: 70,  movingChance: 0.00, breakChance: 0.00,
+            return { gapMin: 80,  gapMax: 100, movingChance: 0.00, breakChance: 0.00,
                      powerUpChance: 0.04, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
                      jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
         } else {
-            return { gapMin: 70,  gapMax: 90,  width: 80,  movingChance: 0.00, breakChance: 0.00,
+            return { gapMin: 70,  gapMax: 90, movingChance: 0.00, breakChance: 0.00,
                      powerUpChance: 0.04, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
                      jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
         }
@@ -262,7 +271,7 @@ export function createGame(canvas) {
     function spawnPlatformAbove(topmostY) {
         const diff  = getDifficulty(score);
         const newY  = topmostY - randInt(diff.gapMin, diff.gapMax);
-        const width = diff.width;
+        const width = platformWidth(score);
         const x     = randInt(0, CANVAS_WIDTH - width);
 
         let type = 'static';
@@ -345,8 +354,7 @@ export function createGame(canvas) {
         bootsBounceVelocity       = BOOTS_BOUNCE_VELOCITY * getHigherJumpMultiplier();
         breakableExtraLandings    = getBreakableGripLevel();
 
-        const starterDiff  = getDifficulty(0);
-        const starterWidth = starterDiff.width;
+        const starterWidth = platformWidth(0);
         const starterX     = Math.floor((CANVAS_WIDTH - starterWidth) / 2);
         const starterY     = CANVAS_HEIGHT - 40;
 
@@ -1126,8 +1134,7 @@ export function createGame(canvas) {
     backupJetpackArmed        = hasBackupJetpack();
 
     // Pre-init platforms/player so draw() has valid data even before reset()
-    const _initDiff  = getDifficulty(0);
-    const _initW     = _initDiff.width;
+    const _initW     = platformWidth(0);
     const _starterY  = CANVAS_HEIGHT - 40;
     platforms = [{ x: Math.floor((CANVAS_WIDTH - _initW) / 2), y: _starterY, width: _initW, type: 'static' }];
     player    = { x: Math.floor((CANVAS_WIDTH - PLAYER_WIDTH) / 2), y: _starterY - PLAYER_HEIGHT, velocityY: 0 };
