@@ -14,6 +14,7 @@ export const ACHIEVEMENTS = Object.freeze([
     { id: 'score_100000', title: 'Six Figures, Baby',               description: 'Reach a score of 100,000.',                            icon: 'score'   },
     { id: 'all_maxed',    title: 'Maxed Out and Loving It',         description: 'Fully upgrade every single upgrade.',                   icon: 'crown'   },
     { id: 'jetpack_save', title: 'Emergency Exit Rocket',           description: 'Get saved from certain doom by an emergency jetpack.',  icon: 'jetpack' },
+    { id: 'liftoff',      title: 'Houston, We Have a Blunday',      description: 'Blast off on twin boosters straight to 10,000.',        icon: 'booster' },
     { id: 'gold_100000',  title: 'I Can Fall Now',                  description: 'Collect 100,000 gold in total. You\'re rich, fall in peace.', icon: 'bag' },
 ]);
 

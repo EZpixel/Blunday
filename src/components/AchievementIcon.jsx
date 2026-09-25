@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawUmbrellaGlyph, drawScoreGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawCrownGlyph } from '../game/glyphs.js';
+import { drawJetpackGlyph, drawBoosterGlyph, drawBootsGlyph, drawStarGlyph, drawUmbrellaGlyph, drawScoreGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawCrownGlyph } from '../game/glyphs.js';
 
 // Glyphs are drawn for a 32x32 box centered at (16, 16); scale to the requested size.
 export default function AchievementIcon({ icon, size = 18 }) {
@@ -16,6 +16,7 @@ export default function AchievementIcon({ icon, size = 18 }) {
         const cx = 16;
         const cy = 16;
         if (icon === 'jetpack')       drawJetpackGlyph(ctx, cx, cy);
+        else if (icon === 'booster')  drawBoosterGlyph(ctx, cx, cy);
         else if (icon === 'boots')    drawBootsGlyph(ctx, cx, cy);
         else if (icon === 'star')     drawStarGlyph(ctx, cx, cy);
         else if (icon === 'umbrella') drawUmbrellaGlyph(ctx, cx, cy);

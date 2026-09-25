@@ -84,6 +84,15 @@ export const UPGRADES = Object.freeze([
         costs:         [1000],
         effectPerTier: 1,
     },
+    {
+        id:            'boosterLiftOff',
+        icon:          '🔥',
+        title:         'Booster Ignition & Lift Off',
+        description:   'Every run starts strapped to twin rockets that blast you straight to 10,000. Houston, we have a Blunday.',
+        maxTier:       1,
+        costs:         [100000],
+        effectPerTier: 1,
+    },
 ]);
 
 function loadTiers() {
@@ -145,6 +154,10 @@ export function getBreakableGripLevel() {
 
 export function hasBackupJetpack() {
     return getTier('backupJetpack') > 0;
+}
+
+export function hasBoosterLiftOff() {
+    return getTier('boosterLiftOff') > 0;
 }
 
 export function getLuckCoinBonus() {

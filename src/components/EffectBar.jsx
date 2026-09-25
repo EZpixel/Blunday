@@ -2,7 +2,7 @@ import AchievementIcon from './AchievementIcon.jsx';
 
 export default function EffectBar({ effects }) {
     if (!effects || effects.length === 0) return null;
-    const labels = { jetpack: 'Jetpack', boots: 'Boots', umbrella: 'Umbrella', star: 'Star' };
+    const labels = { booster: 'Boosters', jetpack: 'Jetpack', boots: 'Boots', umbrella: 'Umbrella', star: 'Star' };
     return (
         <div className="effect-bar-stack">
             {effects.map(e => {

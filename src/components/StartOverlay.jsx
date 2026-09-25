@@ -18,7 +18,7 @@ export default function StartOverlay({ onPlay, onAchievements, onUpgrades }) {
                 <button onClick={onUpgrades}>Upgrades</button>
                 <button onClick={onAchievements}>Achievements</button>
             </div>
-            <span className="version-label">RC5</span>
+            <span className="version-label">RC6</span>
         </div>
     );
 }

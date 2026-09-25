@@ -40,6 +40,48 @@ export function drawJetpackGlyph(ctx, cx, cy) {
     ctx.restore();
 }
 
+// Twin boosters: two chunky jetpacks with blue-hot cores in their flames.
+export function drawBoosterGlyph(ctx, cx, cy) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    for (const x of [-7, 7]) {
+        // Outer flame
+        ctx.fillStyle = '#ff7a1a';
+        ctx.beginPath();
+        ctx.moveTo(x - 4, 6);
+        ctx.lineTo(x + 4, 6);
+        ctx.lineTo(x, 15);
+        ctx.closePath();
+        ctx.fill();
+        // Inner core
+        ctx.fillStyle = '#bfe8ff';
+        ctx.beginPath();
+        ctx.moveTo(x - 2, 6);
+        ctx.lineTo(x + 2, 6);
+        ctx.lineTo(x, 11);
+        ctx.closePath();
+        ctx.fill();
+        // Body with nose cone
+        ctx.fillStyle = '#d23a3a';
+        ctx.beginPath();
+        ctx.moveTo(x - 5, 6);
+        ctx.lineTo(x - 5, -8);
+        ctx.quadraticCurveTo(x, -16, x + 5, -8);
+        ctx.lineTo(x + 5, 6);
+        ctx.closePath();
+        ctx.fill();
+        // Stripe
+        ctx.fillStyle = '#ffd24a';
+        ctx.fillRect(x - 5, 0, 10, 2);
+        // Window
+        ctx.fillStyle = '#aaddff';
+        ctx.beginPath();
+        ctx.arc(x, -5, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
 // One spring boot: shaft + toe pointing right, with a zigzag spring under the sole.
 // x0 is the heel's left edge; the boot spans x0..x0+8.
 function _drawSpringBoot(ctx, x0) {

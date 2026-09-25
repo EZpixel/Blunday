@@ -140,6 +140,18 @@ body {
     background: linear-gradient(90deg, #ff6644, #ffaa22);
 }
 
+/* Same bar as the jetpack, running hot */
+.effect-bar-fill.booster {
+    background: linear-gradient(90deg, #ff6644, #ffaa22);
+    box-shadow: 0 0 8px #ff8833;
+    animation: booster-bar-pulse 0.25s ease-in-out infinite alternate;
+}
+
+@keyframes booster-bar-pulse {
+    from { filter: brightness(1); }
+    to   { filter: brightness(1.35); }
+}
+
 .effect-bar-fill.boots {
     background: linear-gradient(90deg, #8844cc, #cc88ff);
 }

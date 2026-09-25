@@ -1,6 +1,6 @@
 import { unlock } from './achievements.js';
 import { getGold, addGold, getTotalEarned } from './wallet.js';
-import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
+import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, hasBoosterLiftOff, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
 import { playSfx, pickVariant, setLoop, stopAllLoops } from './audio.js';
 import { isExperimental } from './settings.js';
 import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawUmbrellaGlyph } from './glyphs.js';
@@ -10,7 +10,7 @@ import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoi
 // Ascending means decreasing y. cameraY starts at 0 and only ever
 // decreases (moves up, never back down).
 // screenY = worldY - cameraY
-// score   = max(score, floor(-cameraY))
+// score   = floor(-cameraY) + pickup bonuses
 // Cull a platform when platform.y > cameraY + CANVAS_HEIGHT.
 // Game over when player.y - cameraY > CANVAS_HEIGHT.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +30,8 @@ const PLAYER_HEIGHT   = 40;
 const MOVE_SPEED      = 5;
 const PLATFORM_HEIGHT = 12;
 const PLATFORM_START_WIDTH     = 80;
-const PLATFORM_MIN_WIDTH_SCORE = 100000; // platforms are PLAYER_WIDTH wide from here on
+const PLATFORM_PLAYER_WIDTH_SCORE = 30000;  // platforms are PLAYER_WIDTH wide here
+const PLATFORM_MIN_WIDTH_SCORE    = 100000; // and half that from here on
 const COIN_OFFSET_Y   = 20; // gold pickup center above its platform's top (glyphs reach ~10 below center)
 const CAMERA_LINE     = 0.40 * CANVAS_HEIGHT;
 
@@ -44,8 +45,20 @@ const STAR_SCORE_BONUS         = 500;
 const STAR_DURATION_FRAMES     = 300;
 const UMBRELLA_DURATION_FRAMES = 300;
 
+// Booster Ignition & Lift Off upgrade: twin rockets carry the player from the
+// starter platform to BOOSTER_TARGET_SCORE at the start of every run
+const BOOSTER_TARGET_SCORE    = 10000;
+const BOOSTER_IGNITION_FRAMES = 50;    // rumbling on the pad before lift-off
+const BOOSTER_FORCE           = -1.0;  // upward accel per frame once airborne
+const BOOSTER_MAX_SPEED       = -30;
+const BOOSTER_EXIT_SPEED      = JETPACK_MAX_SPEED; // speed left over when the boosters cut out
+const BOOSTER_PACK_WIDTH      = 12;    // one pack strapped to each side of the player
+const BOOSTER_PACK_HEIGHT     = 32;    // nose cone tip to nozzle exit
+
 // Power-ups whose sound loops for as long as the effect is active
 const LOOPED_EFFECT_SOUNDS = ['jetpack', 'umbrella'];
+// Power-ups whose sound plays on each landing instead of at pickup
+const LANDING_EFFECT_SOUNDS = ['boots'];
 
 // Parallax background circles
 const BG_CIRCLE_COUNT = 18;
@@ -62,6 +75,7 @@ export function createGame(canvas) {
     let platforms;
     let cameraY;
     let score;
+    let scoreBonus;    // points from pickups, added on top of the height reached
     let coins;
     let activeEffects; // { [type]: { type, remaining, total } }
     let particles;     // [{ x, y, vx, vy, life, maxLife, size, color, kind }]
@@ -80,6 +94,8 @@ export function createGame(canvas) {
     let breakableExtraLandings = 0;
     let backupJetpackArmed = false;
     let justSaved = false;
+    let shake = 0; // screen shake amplitude in logical units
+    let flash = 0; // full-screen white flash, 0..1
     const gaze = { x: 0, y: 0 }; // pupil direction, each axis -1..1
     const effectSoundVariant = {}; // one-shot power-up sound variant, kept while the effect is active
 
@@ -156,7 +172,7 @@ export function createGame(canvas) {
 
     function goldDistribution(s) {
         const V10  = [0.70, 0.30, 0,    0];
-        const V30  = [0.30, 0.30, 0.25, 0.15];
+        const V30  = [0.30, 0.30, 0.40, 0];    // red gems only start appearing past 30k
         const V100 = [0,    0,    0,    1];
         if (s < 10000) return [1, 0, 0, 0];
         if (s <= 30000) {
@@ -191,7 +207,7 @@ export function createGame(canvas) {
     // Power-up hierarchy: only one of these can be active at a time. Picking up a
     // higher- or equal-ranked one replaces the active one; a lower-ranked one
     // can't be picked up. Star isn't listed, so it combines with any of them.
-    const EXCLUSIVE_RANK = { umbrella: 1, boots: 2, jetpack: 3 };
+    const EXCLUSIVE_RANK = { umbrella: 1, boots: 2, jetpack: 3, booster: 4 };
 
     function activeExclusiveEffect() {
         for (const t in EXCLUSIVE_RANK) if (activeEffects[t]) return t;
@@ -202,27 +218,34 @@ export function createGame(canvas) {
         for (const t in EXCLUSIVE_RANK) delete activeEffects[t];
     }
 
-    // Looped sounds are driven by the effect tick. One-shots pick a random
-    // variant per activation, and re-picking an active power-up reuses it.
+    // Looped sounds are driven by the effect tick and landing sounds by
+    // checkLanding(). One-shots pick a random variant per activation, and
+    // re-picking an active power-up reuses it.
     function playPowerUpSound(type, alreadyActive) {
         if (LOOPED_EFFECT_SOUNDS.includes(type)) return;
         if (!alreadyActive || effectSoundVariant[type] === undefined) effectSoundVariant[type] = pickVariant(type);
+        if (LANDING_EFFECT_SOUNDS.includes(type)) return;
         playSfx(type, effectSoundVariant[type]);
     }
 
     function effectsSnapshot() {
-        const order = ['jetpack', 'boots', 'umbrella', 'star'];
+        const order = ['booster', 'jetpack', 'boots', 'umbrella', 'star'];
         return order
             .filter(t => activeEffects[t])
             .map(t => ({ type: t, remaining: activeEffects[t].remaining, total: activeEffects[t].total }));
     }
 
     // ─── Difficulty ───────────────────────────────────────────────────────────
-    // Platforms shrink smoothly with height, reaching the player's width at
-    // PLATFORM_MIN_WIDTH_SCORE and staying there.
+    // Platforms shrink smoothly with height: to the player's width at
+    // PLATFORM_PLAYER_WIDTH_SCORE, then to half of it at PLATFORM_MIN_WIDTH_SCORE,
+    // and stay there.
     function platformWidth(s) {
-        const t = Math.min(Math.max(s, 0) / PLATFORM_MIN_WIDTH_SCORE, 1);
-        return Math.round(lerp(PLATFORM_START_WIDTH, PLAYER_WIDTH, t));
+        s = Math.max(s, 0);
+        if (s <= PLATFORM_PLAYER_WIDTH_SCORE) {
+            return Math.round(lerp(PLATFORM_START_WIDTH, PLAYER_WIDTH, s / PLATFORM_PLAYER_WIDTH_SCORE));
+        }
+        const t = Math.min((s - PLATFORM_PLAYER_WIDTH_SCORE) / (PLATFORM_MIN_WIDTH_SCORE - PLATFORM_PLAYER_WIDTH_SCORE), 1);
+        return Math.round(lerp(PLAYER_WIDTH, PLAYER_WIDTH / 2, t));
     }
 
     function getDifficulty(s) {
@@ -265,6 +288,105 @@ export function createGame(canvas) {
                 kind,
             });
         }
+    }
+
+    // Single particle with its own physics: gravity (default 0.1) and drag (velocity kept per frame)
+    function emitParticle(kind, x, y, vx, vy, life, size, gravity = 0.1, drag = 1) {
+        particles.push({ x, y, vx, vy, life, maxLife: life, size, kind, gravity, drag });
+    }
+
+    // ─── Booster ──────────────────────────────────────────────────────────────
+    // The packs hang centered on the (squashed) body, see draw(); particles
+    // leave from the same nozzle spots.
+    function playerStretch(velocityY) {
+        return Math.max(0.7, Math.min(1.3, 1 + velocityY * 0.02));
+    }
+
+    function boosterPackTop(bodyY, bodyH) {
+        return bodyY + bodyH / 2 - BOOSTER_PACK_HEIGHT / 2;
+    }
+
+    function boosterNozzles() {
+        const bodyH = PLAYER_HEIGHT * playerStretch(player.velocityY);
+        const y = boosterPackTop(player.y + PLAYER_HEIGHT - bodyH, bodyH) + BOOSTER_PACK_HEIGHT;
+        return [player.x - BOOSTER_PACK_WIDTH / 2, player.x + PLAYER_WIDTH + BOOSTER_PACK_WIDTH / 2].map(x => ({ x, y }));
+    }
+
+    function igniteBooster() {
+        activeEffects.booster = {
+            type:      'booster',
+            remaining: BOOSTER_TARGET_SCORE,
+            total:     BOOSTER_TARGET_SCORE,
+            ignition:  BOOSTER_IGNITION_FRAMES,
+        };
+    }
+
+    function burst(x, y, sparks, smokes) {
+        for (let i = 0; i < sparks; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const v = randRange(2, 9);
+            emitParticle('spark', x, y, Math.cos(a) * v, Math.sin(a) * v, randRange(25, 50), randRange(1.5, 3.5), 0.15, 0.97);
+        }
+        for (let i = 0; i < smokes; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const v = randRange(1, 5);
+            emitParticle('smoke', x, y, Math.cos(a) * v, Math.sin(a) * v * 0.4, randRange(40, 70), randRange(8, 16), -0.02, 0.94);
+        }
+        emitParticle('ring', x, y, 0, 0, 30, 90, 0);
+    }
+
+    function liftOff() {
+        const feetY = player.y + PLAYER_HEIGHT;
+        burst(player.x + PLAYER_WIDTH / 2, feetY, 60, 40);
+        flash = 0.8;
+        shake = 6;
+        playSfx('jetpack');
+    }
+
+    function boosterCutOff() {
+        delete activeEffects.booster;
+        player.velocityY = Math.max(player.velocityY, BOOSTER_EXIT_SPEED);
+        for (const n of boosterNozzles()) burst(n.x, n.y, 30, 10);
+        flash = 0.45;
+        shake = 5;
+        tryUnlock('liftoff');
+    }
+
+    function emitBoosterParticles(booster) {
+        const spool = 1 - booster.ignition / BOOSTER_IGNITION_FRAMES; // 0 → 1 while on the pad
+        const airborne = booster.ignition === 0;
+        for (const n of boosterNozzles()) {
+            const flames = airborne ? 4 : Math.round(1 + spool * 3);
+            for (let i = 0; i < flames; i++) {
+                const vy = airborne ? player.velocityY + randRange(6, 11) : randRange(2, 5) * (0.5 + spool);
+                emitParticle('flame', n.x + randRange(-3, 3), n.y + randRange(0, 6), randRange(-0.8, 0.8), vy,
+                             randRange(14, 24), randRange(7, 13), 0);
+            }
+            if (airborne) {
+                // Smoke trail lags far behind the rocket
+                if (Math.random() < 0.7) {
+                    emitParticle('smoke', n.x + randRange(-4, 4), n.y + 10, randRange(-1.5, 1.5), player.velocityY * 0.35,
+                                 randRange(30, 45), randRange(6, 11), 0, 0.98);
+                }
+            } else if (Math.random() < 0.3 + spool * 0.6) {
+                // Exhaust hitting the pad billows out sideways
+                const side = n.x < player.x ? -1 : 1;
+                emitParticle('smoke', n.x, n.y + 8, side * randRange(1.5, 5), randRange(-1, 0), randRange(45, 75),
+                             randRange(6, 12), -0.02, 0.95);
+            }
+            if (Math.random() < (airborne ? 0.6 : spool * 0.5)) {
+                emitParticle('spark', n.x, n.y + 4, randRange(-3, 3), (airborne ? player.velocityY * 0.5 : 0) + randRange(1, 5),
+                             randRange(15, 30), randRange(1, 2.5), 0.15);
+            }
+        }
+        // Speed lines rushing past the screen
+        if (airborne) {
+            for (let i = 0; i < 2; i++) {
+                emitParticle('streak', Math.random() * CANVAS_WIDTH, cameraY + Math.random() * CANVAS_HEIGHT, 0, 0,
+                             randRange(6, 12), randRange(20, 50), 0);
+            }
+        }
+        shake = Math.max(shake, airborne ? 2 : spool * 3.5);
     }
 
     // ─── Spawn ────────────────────────────────────────────────────────────────
@@ -333,10 +455,13 @@ export function createGame(canvas) {
         cameraY         = 0;
         prevCameraY     = 0;
         score           = 0;
+        scoreBonus      = 0;
         coins           = 0;
         activeEffects   = {};
         particles       = [];
         justUnlocked    = [];
+        shake           = 0;
+        flash           = 0;
         stopAllLoops();
         gold            = getGold(); // upgrades bought in the menu may have spent gold
         dragTargetX     = null;
@@ -540,7 +665,8 @@ export function createGame(canvas) {
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
                     tryUnlock('boots');
                 } else if (p.powerUp.type === 'star') {
-                    score += STAR_SCORE_BONUS;
+                    scoreBonus += STAR_SCORE_BONUS;
+                    score      += STAR_SCORE_BONUS;
                     coins++;
                     activeEffects.star = { type: 'star', remaining: STAR_DURATION_FRAMES, total: STAR_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 12);
@@ -581,8 +707,20 @@ export function createGame(canvas) {
 
         const prevBottom = player.y + PLAYER_HEIGHT;
 
-        // Jetpack overrides gravity
-        if (activeEffects.jetpack) {
+        // Booster and jetpack override gravity
+        const booster = activeEffects.booster;
+        if (booster) {
+            if (booster.ignition > 0) {
+                // Engines spooling up: held on the pad
+                player.velocityY = 0;
+                booster.ignition--;
+                if (booster.ignition === 0) liftOff();
+            } else {
+                player.velocityY = Math.max(player.velocityY + BOOSTER_FORCE, BOOSTER_MAX_SPEED);
+                player.y += player.velocityY;
+            }
+            emitBoosterParticles(booster);
+        } else if (activeEffects.jetpack) {
             player.velocityY = Math.max(player.velocityY + JETPACK_FORCE, JETPACK_MAX_SPEED);
             player.y += player.velocityY;
             // Exhaust particles at the bottom of the player
@@ -606,12 +744,19 @@ export function createGame(canvas) {
         const targetCameraY = player.y - CAMERA_LINE;
         if (targetCameraY < cameraY) cameraY = targetCameraY;
 
-        score     = Math.max(score,     Math.floor(-cameraY));
+        // cameraY only ever decreases, so height (and with it score) never drops
+        score     = Math.floor(-cameraY) + scoreBonus;
         highScore = Math.max(highScore, score);
 
         if (score >= 10000 && !scoreAchAwarded) { scoreAchAwarded = true; tryUnlock('score_10000'); }
         if (score >= 30000 && !score30kAchAwarded) { score30kAchAwarded = true; tryUnlock('score_30000'); }
         if (score >= 100000 && !score100kAchAwarded) { score100kAchAwarded = true; tryUnlock('score_100000'); }
+
+        // Booster bar drains with the distance still to go
+        if (booster && booster.ignition === 0) {
+            booster.remaining = Math.max(0, BOOSTER_TARGET_SCORE - score);
+            if (booster.remaining === 0) boosterCutOff();
+        }
 
         // Spawn new platforms
         let topmostY = Math.min(...platforms.map(p => p.y));
@@ -627,10 +772,15 @@ export function createGame(canvas) {
 
         // Tick active effects
         for (const key of Object.keys(activeEffects)) {
+            if (key === 'booster') continue; // ticks by score, above
             activeEffects[key].remaining--;
             if (activeEffects[key].remaining <= 0) delete activeEffects[key];
         }
-        for (const type of LOOPED_EFFECT_SOUNDS) setLoop(type, !!activeEffects[type]);
+        // The booster roars with the jetpack's loop
+        for (const type of LOOPED_EFFECT_SOUNDS) setLoop(type, !!activeEffects[type] || (type === 'jetpack' && !!activeEffects.booster));
+
+        shake *= 0.9;
+        flash *= 0.9;
 
         // Star: gold sparkles drifting off the player
         if (activeEffects.star && Math.random() < 0.25) {
@@ -641,7 +791,11 @@ export function createGame(canvas) {
         particles = particles.filter(part => {
             part.x    += part.vx;
             part.y    += part.vy;
-            part.vy   += 0.1; // light gravity on particles
+            if (part.drag !== undefined) {
+                part.vx *= part.drag;
+                part.vy *= part.drag;
+            }
+            part.vy   += part.gravity ?? 0.1; // light gravity on particles by default
             part.life--;
             return part.life > 0;
         });
@@ -746,6 +900,14 @@ export function createGame(canvas) {
         gem:      makeGlowSprite(PICKUP_GLOW_SIZE, '255,50,50',   0.6),
     };
 
+    // Booster fire: additive glow blobs are much cheaper than per-particle gradients
+    const FLAME_HOT_SPRITE  = makeGlowSprite(32, '200,235,255', 1);
+    const FLAME_FIRE_SPRITE = makeGlowSprite(32, '255,130,40',  1);
+    const NOZZLE_GLOW_SIZE  = 70;
+    const nozzleGlowSprite  = makeGlowSprite(NOZZLE_GLOW_SIZE, '255,160,60', 0.9);
+    const BOOSTER_AURA_SIZE = 190;
+    const boosterAuraSprite = makeGlowSprite(BOOSTER_AURA_SIZE, '255,120,40', 0.55);
+
     // Slow pulse; the per-pickup phase (from its world y) keeps them out of sync
     function drawPickupGlow(name, cx, cy, phase, now) {
         const glow = PICKUP_GLOWS[name];
@@ -840,6 +1002,146 @@ export function createGame(canvas) {
         ctx.restore();
     }
 
+    // One booster rocket: nose cone, body with a racing stripe and porthole, a
+    // tail fin on the outer side and a nozzle. x is its left edge.
+    function drawBoosterPack(x, y, finSide) {
+        const W  = BOOSTER_PACK_WIDTH;
+        const H  = BOOSTER_PACK_HEIGHT;
+        const cx = x + W / 2;
+
+        // Fin
+        const finX = finSide < 0 ? x : x + W;
+        ctx.fillStyle = '#8a1f1f';
+        ctx.beginPath();
+        ctx.moveTo(finX, y + H - 16);
+        ctx.lineTo(finX + finSide * 6, y + H - 4);
+        ctx.lineTo(finX, y + H - 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Nozzle
+        ctx.fillStyle = '#555a66';
+        ctx.beginPath();
+        ctx.moveTo(x + 3, y + H - 5);
+        ctx.lineTo(x + W - 3, y + H - 5);
+        ctx.lineTo(x + W - 1, y + H);
+        ctx.lineTo(x + 1, y + H);
+        ctx.closePath();
+        ctx.fill();
+
+        // Body and nose cone
+        ctx.fillStyle = '#d23a3a';
+        ctx.beginPath();
+        ctx.moveTo(x, y + H - 5);
+        ctx.lineTo(x, y + 9);
+        ctx.quadraticCurveTo(cx, y - 4, x + W, y + 9);
+        ctx.lineTo(x + W, y + H - 5);
+        ctx.closePath();
+        ctx.fill();
+        // Metallic highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fillRect(x + 2, y + 9, 2, H - 16);
+        // Stripe
+        ctx.fillStyle = '#ffd24a';
+        ctx.fillRect(x, y + H - 13, W, 3);
+        // Porthole
+        ctx.fillStyle = '#aaddff';
+        ctx.beginPath();
+        ctx.arc(cx, y + 11, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Layered flame cone (outer fire, yellow middle, blue-white core) with a
+    // flickering glow at the nozzle. Drawn additively.
+    const FLAME_LAYERS = [
+        [6,   1,    'rgba(255,110,30,0.85)'],
+        [4,   0.65, 'rgba(255,210,70,0.9)'],
+        [2.2, 0.4,  'rgba(210,240,255,0.95)'],
+    ];
+    function drawBoosterFlame(cx, ny, len) {
+        const glow = NOZZLE_GLOW_SIZE * (0.8 + 0.4 * Math.random());
+        ctx.drawImage(nozzleGlowSprite, cx - glow / 2, ny + len * 0.3 - glow / 2, glow, glow);
+        for (const [w, l, color] of FLAME_LAYERS) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(cx - w, ny);
+            ctx.quadraticCurveTo(cx - w * 1.3, ny + len * l * 0.45, cx, ny + len * l);
+            ctx.quadraticCurveTo(cx + w * 1.3, ny + len * l * 0.45, cx + w, ny);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    // Booster particles sit behind the player; the rest are drawn in front
+    const BACK_PARTICLES = new Set(['smoke', 'flame', 'streak', 'ring']);
+
+    function drawParticles(camY, alpha, back) {
+        for (const part of particles) {
+            if (BACK_PARTICLES.has(part.kind) !== back) continue;
+            const pScreenY = interp(part.prevY, part.y, alpha) - camY;
+            if (pScreenY < -60 || pScreenY > CANVAS_HEIGHT + 60) continue;
+            const pX = interp(part.prevX, part.x, alpha);
+
+            const t = part.life / part.maxLife; // 1 = fresh, 0 = dead
+
+            if (part.kind === 'flame') {
+                // Blue-white when fresh, then fire, shrinking as it cools
+                const size = part.size * (0.4 + t);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = Math.min(1, t * 1.4);
+                ctx.drawImage(t > 0.7 ? FLAME_HOT_SPRITE : FLAME_FIRE_SPRITE, pX - size / 2, pScreenY - size / 2, size, size);
+                ctx.globalAlpha = 1;
+                ctx.globalCompositeOperation = 'source-over';
+                continue;
+            }
+            if (part.kind === 'smoke') {
+                // Grey puff that swells as it fades
+                const shade = Math.floor(110 + 60 * t);
+                ctx.fillStyle = `rgba(${shade},${shade},${shade + 10},${t * 0.35})`;
+                ctx.beginPath();
+                ctx.arc(pX, pScreenY, part.size * (1 + (1 - t) * 2.5), 0, Math.PI * 2);
+                ctx.fill();
+                continue;
+            }
+            if (part.kind === 'streak') {
+                // Speed line
+                ctx.fillStyle = `rgba(255,240,220,${t * 0.35})`;
+                ctx.fillRect(pX, pScreenY, 1.5, part.size);
+                continue;
+            }
+            if (part.kind === 'ring') {
+                // Shockwave spreading flat from the launch point
+                const radius = part.size * (1 - t) + 4;
+                ctx.strokeStyle = `rgba(255,220,160,${t * 0.8})`;
+                ctx.lineWidth   = 1 + 4 * t;
+                ctx.beginPath();
+                ctx.ellipse(pX, pScreenY, radius, radius * 0.35, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                continue;
+            }
+
+            if (part.kind === 'exhaust') {
+                // Orange → yellow → transparent
+                const r = 255;
+                const g = Math.floor(100 + 120 * t);
+                const b = 0;
+                ctx.fillStyle = `rgba(${r},${g},${b},${t * 0.8})`;
+            } else if (part.kind === 'spark') {
+                // Hot white-yellow ember
+                ctx.fillStyle = `rgba(255,${Math.floor(180 + 75 * t)},${Math.floor(120 * t)},${t})`;
+            } else {
+                // Pickup sparkle: gold to white
+                const r = 255;
+                const g = Math.floor(200 + 55 * t);
+                const b = Math.floor(100 * (1 - t));
+                ctx.fillStyle = `rgba(${r},${g},${b},${t})`;
+            }
+            ctx.beginPath();
+            ctx.arc(pX, pScreenY, part.size * t, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     // alpha (0..1) is how far the renderer is between the previous physics step
     // and the current one; positions are blended so high-refresh screens show
     // in-between frames instead of repeating each 60Hz step.
@@ -849,6 +1151,9 @@ export function createGame(canvas) {
         // ── Background gradient ──
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.save();
+        if (shake > 0.2) ctx.translate(randRange(-shake, shake), randRange(-shake, shake));
 
         // ── Parallax soft circles (stars/clouds) ──
         for (const c of bgCircles) {
@@ -910,9 +1215,23 @@ export function createGame(canvas) {
         const playerScreenY = interp(player.prevY, player.y, alpha) - camY;
 
         // Squash/stretch based on velocity
-        const stretchFactor = Math.max(0.7, Math.min(1.3, 1 + interp(player.prevVelocityY, player.velocityY, alpha) * 0.02));
+        const stretchFactor = playerStretch(interp(player.prevVelocityY, player.velocityY, alpha));
         const drawH = PLAYER_HEIGHT * stretchFactor;
         const drawY = playerScreenY + PLAYER_HEIGHT - drawH; // anchor bottom
+
+        drawParticles(camY, alpha, true);
+
+        // Booster: flickering heat aura behind the player
+        const booster = activeEffects.booster;
+        const spool   = booster ? 1 - booster.ignition / BOOSTER_IGNITION_FRAMES : 0;
+        if (booster) {
+            const size = BOOSTER_AURA_SIZE * (0.5 + 0.5 * spool) * (0.9 + 0.2 * Math.random());
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.5 + 0.5 * spool;
+            ctx.drawImage(boosterAuraSprite, px + PLAYER_WIDTH / 2 - size / 2, drawY + drawH * 0.7 - size / 2, size, size);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = 'source-over';
+        }
 
         // Star: pulsing golden aura behind the player
         const starPulse = 0.5 + 0.5 * Math.sin(now * 0.008);
@@ -957,6 +1276,21 @@ export function createGame(canvas) {
             ctx.fill();
         }
 
+        // Booster: a rocket strapped to each side, flames roaring from both
+        if (booster) {
+            const packY  = boosterPackTop(drawY, drawH);
+            const leftX  = px - BOOSTER_PACK_WIDTH;
+            const rightX = px + PLAYER_WIDTH;
+            ctx.globalCompositeOperation = 'lighter';
+            for (const x of [leftX, rightX]) {
+                const len = booster.ignition > 0 ? 6 + 22 * spool * (0.7 + 0.3 * Math.random()) : 36 + 18 * Math.random();
+                drawBoosterFlame(x + BOOSTER_PACK_WIDTH / 2, packY + BOOSTER_PACK_HEIGHT, len);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            drawBoosterPack(leftX,  packY, -1);
+            drawBoosterPack(rightX, packY,  1);
+        }
+
         // Spring boots on feet
         if (activeEffects.boots) {
             ctx.fillStyle = '#8844cc';
@@ -985,28 +1319,13 @@ export function createGame(canvas) {
         ctx.fillRect(px + PLAYER_WIDTH - 14, drawY + drawH - 2, 10, 6);
 
         // ── Particles ──
-        for (const part of particles) {
-            const pScreenY = interp(part.prevY, part.y, alpha) - camY;
-            if (pScreenY < -20 || pScreenY > CANVAS_HEIGHT + 20) continue;
+        drawParticles(camY, alpha, false);
+        ctx.restore(); // screen shake
 
-            const t = part.life / part.maxLife; // 1 = fresh, 0 = dead
-
-            if (part.kind === 'exhaust') {
-                // Orange → yellow → transparent
-                const r = 255;
-                const g = Math.floor(100 + 120 * t);
-                const b = 0;
-                ctx.fillStyle = `rgba(${r},${g},${b},${t * 0.8})`;
-            } else {
-                // Pickup sparkle: gold to white
-                const r = 255;
-                const g = Math.floor(200 + 55 * t);
-                const b = Math.floor(100 * (1 - t));
-                ctx.fillStyle = `rgba(${r},${g},${b},${t})`;
-            }
-            ctx.beginPath();
-            ctx.arc(interp(part.prevX, part.x, alpha), pScreenY, part.size * t, 0, Math.PI * 2);
-            ctx.fill();
+        // Launch / cut-off flash
+        if (flash > 0.02) {
+            ctx.fillStyle = `rgba(255,245,225,${flash})`;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         }
     }
 
@@ -1081,6 +1400,7 @@ export function createGame(canvas) {
     function start() {
         startLoop();
         gameState = 'running';
+        if (hasBoosterLiftOff()) igniteBooster();
         emit();
     }
 
@@ -1119,6 +1439,7 @@ export function createGame(canvas) {
 
     // Seed initial state so getSnapshot() is valid before first frame (amendment #2)
     score               = 0;
+    scoreBonus          = 0;
     coins               = 0;
     activeEffects       = {};
     particles           = [];
