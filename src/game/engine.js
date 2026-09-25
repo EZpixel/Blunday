@@ -607,19 +607,38 @@ export function createGame(canvas) {
         ctx.fill();
     }
 
+    // Glyphs are static, so each is drawn once onto an offscreen canvas and then
+    // blitted with drawImage. Redrawing them every frame (paths, gradients and
+    // fillText) was a large share of frame time on Firefox for Android.
+    const SPRITE_SIZE = 48; // glyphs extend at most ~16px from their center
+    function makeSprite(drawGlyph) {
+        const sprite = document.createElement('canvas');
+        sprite.width  = SPRITE_SIZE;
+        sprite.height = SPRITE_SIZE;
+        drawGlyph(sprite.getContext('2d'), SPRITE_SIZE / 2, SPRITE_SIZE / 2);
+        return sprite;
+    }
+    const SPRITES = {
+        jetpack:  makeSprite(drawJetpackGlyph),
+        boots:    makeSprite(drawBootsGlyph),
+        star:     makeSprite(drawStarGlyph),
+        umbrella: makeSprite(drawUmbrellaGlyph),
+        coin:     makeSprite(drawCoinGlyph),
+        bag:      makeSprite(drawCoinBagGlyph),
+        bar:      makeSprite(drawGoldBarGlyph),
+        gem:      makeSprite(drawRedGemGlyph),
+    };
+
+    // Whole-pixel positions avoid resampling the sprite, which is slower and blurrier
+    function drawSprite(name, cx, cy) {
+        const sprite = SPRITES[name];
+        if (sprite) ctx.drawImage(sprite, Math.round(cx - SPRITE_SIZE / 2), Math.round(cy - SPRITE_SIZE / 2));
+    }
+
     function drawPowerUpIcon(pu, platform) {
         const cx = platform.x + platform.width / 2;
         const cy = platform.y - cameraY - 16; // center of icon area above platform (screen-space)
-
-        if (pu.type === 'jetpack') {
-            drawJetpackGlyph(ctx, cx, cy);
-        } else if (pu.type === 'boots') {
-            drawBootsGlyph(ctx, cx, cy);
-        } else if (pu.type === 'star') {
-            drawStarGlyph(ctx, cx, cy);
-        } else if (pu.type === 'umbrella') {
-            drawUmbrellaGlyph(ctx, cx, cy);
-        }
+        drawSprite(pu.type, cx, cy);
     }
 
     // ─── Draw ─────────────────────────────────────────────────────────────────
@@ -699,10 +718,7 @@ export function createGame(canvas) {
             if (platform.coin && !platform.coin.collected) {
                 const coinCx = platform.x + platform.width / 2;
                 const coinCy = platform.y - cameraY - 36;
-                if (platform.coin.type === 'coin')     drawCoinGlyph(ctx, coinCx, coinCy);
-                else if (platform.coin.type === 'bag') drawCoinBagGlyph(ctx, coinCx, coinCy);
-                else if (platform.coin.type === 'bar') drawGoldBarGlyph(ctx, coinCx, coinCy);
-                else                                   drawRedGemGlyph(ctx, coinCx, coinCy);
+                drawSprite(platform.coin.type, coinCx, coinCy);
             }
         }
 
@@ -792,6 +808,12 @@ export function createGame(canvas) {
     // rate regardless of display refresh rate (120/144Hz screens ran too fast).
     const STEP_MS = 1000 / 60;
     const MAX_STEPS_PER_FRAME = 5; // avoid spiral of death after tab switches
+    // Frame timestamps jitter (Firefox rounds them to ~1ms), so a 60Hz frame can
+    // measure 16.2ms or 17.1ms. Without slack the loop alternates 0/1/2 steps per
+    // frame, which reads as stutter. Accepting a step up to 1/8 early keeps 60Hz at
+    // exactly one step per frame; the accumulator can go slightly negative, so the
+    // long-run speed is unchanged.
+    const STEP_TOLERANCE_MS = STEP_MS / 8;
     let lastTime = null;
     let accumulator = 0;
 
@@ -801,7 +823,7 @@ export function createGame(canvas) {
         lastTime = now;
 
         let steps = 0;
-        while (accumulator >= STEP_MS && steps < MAX_STEPS_PER_FRAME) {
+        while (accumulator >= STEP_MS - STEP_TOLERANCE_MS && steps < MAX_STEPS_PER_FRAME) {
             if (gameState === 'running') update();
             accumulator -= STEP_MS;
             steps++;
