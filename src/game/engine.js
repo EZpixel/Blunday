@@ -424,7 +424,11 @@ export function createGame(canvas) {
                         platform.broken = true;
                     }
                 }
-                playSfx(platform.broken ? 'wood' : 'jump');
+                // Boots replace the jump sound (with the variant locked at pickup)
+                // and still play alongside the breaking-wood sound.
+                if (platform.broken) playSfx('wood');
+                if (activeEffects.boots) playSfx('boots', effectSoundVariant.boots);
+                else if (!platform.broken) playSfx('jump');
 
                 return platform;
             }
