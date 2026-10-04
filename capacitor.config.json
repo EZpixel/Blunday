@@ -1,0 +1,11 @@
+{
+  "appId": "com.ezpixel.blunday",
+  "appName": "Blunday",
+  "webDir": "dist",
+  "plugins": {
+    "SystemBars": {
+      "hidden": true,
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

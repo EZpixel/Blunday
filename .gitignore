@@ -28,3 +28,8 @@ dist-ssr
 .workflow/
 .vite/
 dev-server.log
+
+# Android signing keys and release builds: never commit these
+*.jks
+*.keystore
+android/app/release/

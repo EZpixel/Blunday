@@ -49,6 +49,11 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* The app is the whole screen: no frame around it */
+.native-app .game-wrapper {
+    border: none;
+}
+
 .game-wrapper canvas {
     display: block;
     width: 100%;
@@ -67,10 +72,11 @@ body {
     transform-origin: 0 0;
 }
 
-/* Score HUD — top corners, on top of canvas */
+/* Score HUD — top corners, on top of canvas. --safe-top (set by App) keeps it,
+   and everything else anchored to the top, clear of a phone's camera cutout. */
 .score-hud {
     position: absolute;
-    top: 0;
+    top: var(--safe-top, 0px);
     left: 0;
     right: 0;
     display: flex;
@@ -182,6 +188,7 @@ body {
     color: #fff;
     text-align: center;
     padding: 20px;
+    padding-top: calc(20px + var(--safe-top, 0px));
 }
 
 .overlay h1 {
@@ -358,6 +365,9 @@ body {
 
 .settings-footer {
     align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .overlay-header {
@@ -376,6 +386,11 @@ body {
 
 .start-overlay p {
     font-size: 21px;
+}
+
+/* Lighter toward the bottom so the hopping demo behind the menu shows through */
+.start-overlay {
+    background: linear-gradient(rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.1) 85%);
 }
 
 .gameover-overlay h1 {
@@ -471,7 +486,7 @@ body {
 /* Icon-only back button, top-left corner of list screens */
 .overlay .back-button {
     position: absolute;
-    top: 12px;
+    top: calc(12px + var(--safe-top, 0px));
     left: 12px;
     width: 48px;
     height: 48px;
@@ -657,7 +672,7 @@ body {
 /* Toast notification — anchored near top-center of the game canvas */
 .toast {
     position: absolute;
-    top: 48px;
+    top: calc(48px + var(--safe-top, 0px));
     left: 50%;
     transform: translateX(-50%);
     background: rgba(20, 20, 40, 0.92);
@@ -680,22 +695,32 @@ body {
 
 .settings-gear {
     position: absolute;
-    bottom: 6px;
+    bottom: 8px;
     right: 8px;
     z-index: 25;
+    display: flex;
+    padding: 0;
     pointer-events: auto;
     background: transparent;
     border: none;
-    color: #fff;
-    font-size: 44px;
     cursor: pointer;
+    transition: transform 0.05s;
+}
+
+.settings-gear:active {
+    transform: translateY(2px);
+}
+
+/* The gear turns a little on hover, like it's about to do something */
+.settings-gear:hover .menu-emblem svg {
+    transform: rotate(30deg);
 }
 
 /* Sits just left of the settings gear, same spot on the title and game over screens */
 .fullscreen-toggle {
     position: absolute;
-    bottom: 14px;
-    right: 52px;
+    bottom: 15px;  /* centered on the gear (8px + 52px / 2), the button being 38px tall */
+    right: 74px;   /* clear of the 52px gear at right: 8px, with a 14px gap */
     z-index: 25;
     display: flex;
     padding: 4px;
@@ -714,20 +739,20 @@ body {
 
 /* ── Settings screen ─────────────────────────────────────────────────────── */
 .settings-section {
-    width: 320px;
-    padding: 10px 12px 12px;
+    width: 380px;
+    padding: 12px 16px 16px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
     text-align: left;
 }
 
 .settings-section h2 {
     align-self: flex-start;
-    font-size: 13px;
+    font-size: 17px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: #ffe08a;
@@ -738,13 +763,13 @@ body {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
 }
 
 .overlay .volume-toggle {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     margin: 0;
     padding: 0;
     display: flex;
@@ -754,6 +779,8 @@ body {
 
 .volume-toggle svg {
     display: block;
+    width: 24px;
+    height: 24px;
     filter: drop-shadow(0 2px 0 var(--ink));
 }
 
@@ -766,21 +793,21 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     cursor: pointer;
 }
 
 .volume-label {
     display: flex;
     justify-content: space-between;
-    font-size: 14px;
+    font-size: 19px;
     font-weight: bold;
     color: #fff;
     text-shadow: var(--outline-1), 0 2px 0 var(--ink);
 }
 
 .volume-value {
-    font-size: 12px;
+    font-size: 16px;
     color: #ccc;
 }
 
@@ -788,8 +815,8 @@ body {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 10px;
-    border-radius: 5px;
+    height: 14px;
+    border-radius: 7px;
     border: 2px solid var(--ink);
     background: linear-gradient(90deg, #5b9cf0 var(--fill), rgba(255, 255, 255, 0.2) var(--fill));
     cursor: pointer;
@@ -802,8 +829,8 @@ body {
 
 .volume-body input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 2px solid var(--ink);
     background: #fff;
@@ -811,8 +838,8 @@ body {
 }
 
 .volume-body input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     border: 2px solid var(--ink);
     background: #fff;
@@ -829,23 +856,24 @@ body {
 
 .settings-switch-row strong {
     display: block;
-    font-size: 14px;
+    margin-bottom: 2px;
+    font-size: 19px;
     color: #fff;
     text-shadow: var(--outline-1), 0 2px 0 var(--ink);
 }
 
 .settings-switch-row span {
-    font-size: 12px;
+    font-size: 16px;
     color: #ccc;
 }
 
 .overlay .settings-switch {
     flex-shrink: 0;
-    width: 52px;
-    height: 28px;
+    width: 66px;
+    height: 36px;
     margin: 0;
     padding: 0;
-    border-radius: 14px;
+    border-radius: 18px;
     background: linear-gradient(#777, #5c5c5c);
     box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.4), 0 2px 0 #3a3a3a;
 }
@@ -866,10 +894,10 @@ body {
 
 .settings-switch-knob {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 20px;
-    height: 20px;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     border: 2px solid var(--ink);
     background: #fff;
@@ -877,11 +905,14 @@ body {
 }
 
 .settings-switch[aria-checked="true"] .settings-switch-knob {
-    transform: translateX(24px);
+    transform: translateX(30px);
 }
 
 .overlay .settings-section > button {
     margin-top: 0;
+    width: 260px;
+    padding: 13px 20px;
+    font-size: 20px;
 }
 
 .settings-confirm-row {
@@ -891,10 +922,273 @@ body {
 
 .overlay .settings-confirm-row button {
     margin-top: 0;
-    padding: 10px 16px;
+    padding: 13px 18px;
+    font-size: 18px;
 }
 
 .list-overlay .settings-warning {
-    font-size: 13px;
+    font-size: 16px;
     text-align: center;
+}
+
+/* ── Menu emblems ────────────────────────────────────────────────────────── */
+/* Round badge at the left of a menu button: the button's blue, a shade
+   brighter, lit from the top left with a recessed rim so it reads as raised */
+.menu-emblem {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: radial-gradient(circle at 35% 28%, #c2e0ff 0%, #7dbaff 32%, #4f93ec 70%, #3a78cc 100%);
+    box-shadow:
+        inset 0 -4px 0 rgba(13, 22, 64, 0.35),
+        inset 0 2px 0 rgba(255, 255, 255, 0.6),
+        0 3px 0 var(--ink);
+}
+
+.menu-emblem svg {
+    width: 26px;
+    height: 26px;
+    overflow: visible;
+    transition: transform 0.2s;
+    filter: drop-shadow(0 2px 0 var(--ink));
+}
+
+.emblem-fill {
+    fill: #fff;
+    stroke: var(--ink);
+    stroke-width: 2.2px;
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+
+.emblem-line-outline,
+.emblem-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.emblem-line-outline {
+    stroke: var(--ink);
+    stroke-width: 5px;
+}
+
+.emblem-line {
+    stroke: #fff;
+    stroke-width: 2.6px;
+}
+
+.emblem-large {
+    width: 52px;
+    height: 52px;
+}
+
+.emblem-large svg {
+    width: 34px;
+    height: 34px;
+}
+
+/* Emblem pinned to the left edge; the label stays centered on the button */
+.overlay .emblem-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.overlay .emblem-button .menu-emblem {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.overlay .emblem-button:hover:not(:disabled) .menu-emblem svg {
+    transform: scale(1.12);
+}
+
+/* Smaller emblem for the compact buttons on the settings screen */
+.settings-section .emblem-button {
+    min-height: 56px;
+}
+
+.settings-section .emblem-button .menu-emblem {
+    width: 38px;
+    height: 38px;
+    left: 9px;
+}
+
+.settings-section .emblem-button .menu-emblem svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* ── Credits ─────────────────────────────────────────────────────────────── */
+.credits-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Rolls up from below the screen and settles in the middle */
+.credits-roll {
+    margin: auto 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    padding: 24px 28px;
+    text-align: center;
+    animation: credits-roll 6s cubic-bezier(0.2, 0.6, 0.25, 1) both;
+}
+
+@keyframes credits-roll {
+    from { transform: translateY(960px); opacity: 0.6; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+.credits-heading {
+    font-size: 52px;
+    --extrude-1: #2a5fc0;
+    --extrude-2: #1b3a8a;
+    --glow: rgba(102, 170, 255, 0.55);
+}
+
+.overlay .credits-tagline {
+    margin-top: -6px;
+    font-size: 15px;
+    font-style: italic;
+    color: #ffe08a;
+}
+
+.credits-block {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.credits-block h2 {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8fb8ff;
+}
+
+.overlay .credits-name {
+    font-size: 30px;
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: 1px;
+    text-shadow: var(--outline-2), 0 3px 0 var(--ink);
+}
+
+.overlay .credits-small {
+    font-size: 13px;
+    color: #aab;
+}
+
+.overlay .credits-thanks {
+    margin-top: 8px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffe08a;
+    text-shadow: var(--outline-2), 0 3px 0 var(--ink);
+}
+
+.credits-overlay a {
+    color: #9fd0ff;
+    font-weight: bold;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    pointer-events: auto;
+}
+
+.credits-overlay a:hover {
+    color: #c8e4ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .credits-roll {
+        animation: none;
+    }
+}
+
+/* ── Rewarded "2x gold" offer (Android app) ─────────────────────────────── */
+/* Gold instead of the usual blue, so the optional bonus stands apart from the menu */
+.overlay .reward-button {
+    width: 290px;
+    margin-top: 0;
+    padding: 10px 16px 10px 60px;
+    background: linear-gradient(#ffd45c, #e8a21a);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 4px 0 -1px #8a5a0a, 0 4px 6px rgba(0, 0, 0, 0.5);
+    animation: reward-pulse 1.4s ease-in-out infinite alternate;
+}
+
+.overlay .reward-button:hover:not(:disabled) {
+    background: linear-gradient(#ffe07a, #f0b030);
+}
+
+.overlay .reward-button:active:not(:disabled) {
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), 0 2px 0 -1px #8a5a0a, 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+.overlay .reward-button:disabled {
+    animation: none;
+    cursor: progress;
+}
+
+@keyframes reward-pulse {
+    from { filter: brightness(1); }
+    to   { filter: brightness(1.12); }
+}
+
+.reward-button .menu-emblem {
+    background: radial-gradient(circle at 35% 28%, #fff4c2 0%, #ffd45c 35%, #e8a21a 75%, #b87a0c 100%);
+}
+
+.reward-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 18px;
+}
+
+.reward-amount {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 15px;
+}
+
+.reward-amount .gold-icon,
+.reward-result .gold-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.overlay .reward-result {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffe08a;
+    text-shadow: var(--outline-2), 0 3px 0 var(--ink);
+}
+
+.overlay .reward-result.failed {
+    font-size: 15px;
+    color: #ddd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overlay .reward-button {
+        animation: none;
+    }
 }

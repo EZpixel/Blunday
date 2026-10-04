@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { clearSaveData } from '../game/storage.js';
 import { getSettings, updateSettings, subscribeSettings } from '../game/settings.js';
 import BackButton from './BackButton.jsx';
+import MenuEmblem from './MenuEmblem.jsx';
+import { needsPrivacyOptions, showPrivacyOptions } from '../game/ads.js';
 
 function SpeakerIcon({ muted }) {
     return (
@@ -51,7 +53,7 @@ function VolumeSlider({ label, channel, settings }) {
     );
 }
 
-export default function SettingsView({ onBack }) {
+export default function SettingsView({ onBack, onCredits }) {
     const [confirming, setConfirming] = useState(false);
     const [settings, setSettings] = useState(getSettings);
     useEffect(() => subscribeSettings(setSettings), []);
@@ -88,20 +90,28 @@ export default function SettingsView({ onBack }) {
                 </div>
             </section>
 
-            <section className="settings-section settings-footer">
-                <h2>Progress</h2>
-                {confirming ? (
-                    <>
-                        <p className="settings-warning">This will permanently delete your progress. Are you sure?</p>
-                        <div className="settings-confirm-row">
-                            <button onClick={clearSaveData}>Confirm Reset</button>
-                            <button onClick={() => setConfirming(false)}>Cancel</button>
-                        </div>
-                    </>
-                ) : (
-                    <button onClick={() => setConfirming(true)}>Reset Progress</button>
-                )}
-            </section>
+            <div className="settings-footer">
+                <section className="settings-section">
+                    <h2>About</h2>
+                    <button className="emblem-button" onClick={onCredits}><MenuEmblem icon="heart" />Credits</button>
+                    {needsPrivacyOptions() && <button onClick={showPrivacyOptions}>Ad Privacy Options</button>}
+                </section>
+
+                <section className="settings-section">
+                    <h2>Progress</h2>
+                    {confirming ? (
+                        <>
+                            <p className="settings-warning">This will permanently delete your progress. Are you sure?</p>
+                            <div className="settings-confirm-row">
+                                <button onClick={clearSaveData}>Confirm Reset</button>
+                                <button onClick={() => setConfirming(false)}>Cancel</button>
+                            </div>
+                        </>
+                    ) : (
+                        <button onClick={() => setConfirming(true)}>Reset Progress</button>
+                    )}
+                </section>
+            </div>
 
             <BackButton onClick={onBack} />
         </div>

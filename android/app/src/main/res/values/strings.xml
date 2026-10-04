@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Blunday</string>
+    <string name="title_activity_main">Blunday</string>
+    <string name="package_name">com.ezpixel.blunday</string>
+    <string name="custom_url_scheme">com.ezpixel.blunday</string>
+    <!-- AdMob app ID (EzPixel's Blunday app) -->
+    <string name="admob_app_id">ca-app-pub-4815546289908139~9029407193</string>
+</resources>

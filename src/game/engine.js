@@ -114,6 +114,8 @@ export function createGame(canvas) {
     let noGoldAchChecked = false;  // per run: the 10k "no gold" / "no power-ups" checks
     let noPowerAchChecked = false;
     let runGoldPickups = 0;
+    let runGoldEarned = 0;         // gold banked this run, for the rewarded "2x gold" ad
+    let runBonusClaimed = false;
     let runUsedPowerUp = false;
     let experimental = false;      // Experimental Mode, latched per run
     let controlsInverted = false;  // set by landing on an invert platform
@@ -165,6 +167,7 @@ export function createGame(canvas) {
             justUnlocked,
             gold,
             justSaved,
+            runGold: runGoldEarned,
         };
         lastEmitKey = snapshotKey();
         for (const fn of subscribers) fn(snap);
@@ -518,6 +521,7 @@ export function createGame(canvas) {
         const gain = activeEffects.star ? Math.round(g.amount * starGoldMultiplier) : g.amount;
         gold = addGold(gain);
         runGoldPickups++;
+        runGoldEarned += gain;
         playSfx('coin');
         spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 6);
         if (g.type === 'bag')      tryUnlock('gold_bag');
@@ -554,6 +558,8 @@ export function createGame(canvas) {
         noGoldAchChecked          = false;
         noPowerAchChecked         = false;
         runGoldPickups            = 0;
+        runGoldEarned             = 0;
+        runBonusClaimed           = false;
         runUsedPowerUp            = false;
         experimental              = isExperimental();
         controlsInverted          = false;
@@ -743,11 +749,7 @@ export function createGame(canvas) {
     }
 
     // ─── Update ───────────────────────────────────────────────────────────────
-    function update() {
-        moveHorizontal();
-        updateGaze();
-
-        // Move moving platforms
+    function moveMovingPlatforms() {
         for (const p of platforms) {
             if (p.type !== 'moving') continue;
             p.x += p.vx;
@@ -759,6 +761,26 @@ export function createGame(canvas) {
                 p.vx = -p.vx;
             }
         }
+    }
+
+    function updateParticles() {
+        particles = particles.filter(part => {
+            part.x    += part.vx;
+            part.y    += part.vy;
+            if (part.drag !== undefined) {
+                part.vx *= part.drag;
+                part.vy *= part.drag;
+            }
+            part.vy   += part.gravity ?? 0.1; // light gravity on particles by default
+            part.life--;
+            return part.life > 0;
+        });
+    }
+
+    function update() {
+        moveHorizontal();
+        updateGaze();
+        moveMovingPlatforms();
 
         // Power-up collection: AABB check each frame
         // Jetpack, boots and umbrella are mutually exclusive (see EXCLUSIVE_RANK);
@@ -955,18 +977,7 @@ export function createGame(canvas) {
             spawnParticles('pickup', player.x + Math.random() * PLAYER_WIDTH, player.y + Math.random() * PLAYER_HEIGHT, 1);
         }
 
-        // Update particles
-        particles = particles.filter(part => {
-            part.x    += part.vx;
-            part.y    += part.vy;
-            if (part.drag !== undefined) {
-                part.vx *= part.drag;
-                part.vy *= part.drag;
-            }
-            part.vy   += part.gravity ?? 0.1; // light gravity on particles by default
-            part.life--;
-            return part.life > 0;
-        });
+        updateParticles();
 
         // Game over / jetpack save
         if (player.y - cameraY > CANVAS_HEIGHT) {
@@ -987,6 +998,197 @@ export function createGame(canvas) {
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
             }
         }
+    }
+
+    // ─── Main menu demo ───────────────────────────────────────────────────────
+    // On the title screen the player hops around a few platforms on autopilot:
+    // same physics and look as a run, but silent, with a fixed camera and no
+    // scoring. Hops are kept low so the player stays below the menu buttons.
+    // To keep it from looping visibly, the layout is random each time, platforms
+    // drift to new spots now and then, and the autopilot chases the coins that
+    // keep popping up, with a bit of randomness in every hop.
+    const DEMO_BOUNCE_VELOCITY = -10;           // ~125 units of hop height
+    const DEMO_MAX_CLIMB       = 100;           // highest step up the autopilot attempts
+    // Platform heights above the bottom edge (the starter sits at 40). Spaced so
+    // a coin always has room above its platform, even with one passing over it.
+    const DEMO_TIERS           = [85, 128, 168];
+    const DEMO_COIN_DELAY      = [60, 200];     // frames before a new coin pops up
+    const DEMO_MAX_COINS       = 3;
+    const DEMO_DRIFT_DELAY     = [240, 480];    // frames between platforms drifting to a new spot
+    const DEMO_GOLD = [['coin', 0.72], ['bag', 0.14], ['bar', 0.09], ['gem', 0.05]];
+    let demoTarget = null;   // platform the autopilot is heading for
+    let demoAimX   = 0;      // where on it (offset from its center)
+    let demoWrap   = false;  // taking the shortcut through the screen edge
+    let demoCoinTimer  = 0;
+    let demoDriftTimer = 0;
+
+    // A platform placed somewhere in its lane (minX..maxX for its left edge),
+    // which is also where it may later drift to
+    function demoPlatform(tier, type, minX = 0, maxX = CANVAS_WIDTH) {
+        const width = randInt(56, 76);
+        const p = { y: CANVAS_HEIGHT - tier, width, type, minX, maxX: maxX - width };
+        p.x = randInt(p.minX, p.maxX);
+        if (type === 'moving') p.vx = (Math.random() < 0.5 ? -1 : 1) * randRange(0.7, 1.4);
+        return p;
+    }
+
+    function enterDemo() {
+        const starter = { x: 160, y: CANVAS_HEIGHT - 40, width: 80, type: 'static' };
+        // A low static on each side, a blue one sliding above them and a random
+        // one on top
+        platforms = [
+            starter,
+            demoPlatform(DEMO_TIERS[0], 'static', 0, 190),
+            demoPlatform(DEMO_TIERS[0], 'static', 210, CANVAS_WIDTH),
+            demoPlatform(DEMO_TIERS[1], 'moving'),
+            demoPlatform(DEMO_TIERS[2], Math.random() < 0.6 ? 'moving' : 'static'),
+        ];
+        player = {
+            x:         starter.x + (starter.width - PLAYER_WIDTH) / 2,
+            y:         starter.y - PLAYER_HEIGHT,
+            velocityY: 0,
+        };
+        particles      = [];
+        demoTarget     = starter;
+        demoAimX       = 0;
+        demoWrap       = false;
+        demoCoinTimer  = 30;
+        demoDriftTimer = randInt(...DEMO_DRIFT_DELAY);
+        cameraY = prevCameraY = 0;
+        // Start with a couple of coins out
+        for (let i = 0; i < 2; i++) spawnDemoCoin();
+    }
+
+    function spawnDemoCoin() {
+        const free = platforms.filter(p => !p.coin && p !== demoTarget);
+        if (!free.length) return;
+        let roll = Math.random();
+        let type = 'coin';
+        for (const [t, odds] of DEMO_GOLD) {
+            if (roll < odds) { type = t; break; }
+            roll -= odds;
+        }
+        free[randInt(0, free.length - 1)].coin = { type, amount: 0, collected: false };
+    }
+
+    const DEMO_STEP = MOVE_SPEED * 0.8;
+
+    // How far sideways the player can get during a hop from one platform down
+    // (or up) onto another, with some margin
+    function demoReach(from, to) {
+        const v = -DEMO_BOUNCE_VELOCITY;
+        const climb = from.y - to.y;
+        const frames = (v + Math.sqrt(Math.max(v * v - 2 * GRAVITY * climb, 0))) / GRAVITY;
+        return frames * DEMO_STEP * 0.8;
+    }
+
+    // Horizontal distance to a platform's middle, straight and round the screen edge
+    function demoRoutes(to) {
+        const straight = Math.abs(to.x + to.width / 2 - (player.x + PLAYER_WIDTH / 2));
+        return { straight, wrap: CANVAS_WIDTH + PLAYER_WIDTH - straight };
+    }
+
+    // Next hop from a platform: usually a reachable one with gold on it,
+    // otherwise anywhere in reach (sometimes just bouncing in place)
+    function pickDemoTarget(from) {
+        const reachable = platforms.filter(p => {
+            if (p === from || p.y < from.y - DEMO_MAX_CLIMB) return false;
+            const { straight, wrap } = demoRoutes(p);
+            return Math.min(straight, wrap) < demoReach(from, p);
+        });
+        const golden = reachable.filter(p => p.coin);
+        let next;
+        if (golden.length && Math.random() < 0.75) next = golden[randInt(0, golden.length - 1)];
+        else if (Math.random() < 0.15 || !reachable.length) next = from;
+        else next = reachable[randInt(0, reachable.length - 1)];
+
+        demoAimX = randRange(-0.25, 0.25) * next.width;
+        // Run out one edge and in the other when that way is in reach too
+        // (always when it's the only way)
+        const { straight, wrap } = demoRoutes(next);
+        const reach = demoReach(from, next);
+        demoWrap = next !== from && wrap < reach && (straight >= reach || Math.random() < 0.5);
+        return next;
+    }
+
+    function updateDemo() {
+        moveMovingPlatforms();
+        updateGaze();
+        updateParticles();
+
+        // Platforms glide to their new spot when one has been given a drift
+        for (const p of platforms) {
+            if (p.driftTo === undefined) continue;
+            p.x += (p.driftTo - p.x) * 0.03;
+            if (Math.abs(p.driftTo - p.x) < 0.5) { p.x = p.driftTo; delete p.driftTo; }
+        }
+        if (--demoDriftTimer <= 0) {
+            demoDriftTimer = randInt(...DEMO_DRIFT_DELAY);
+            const still = platforms.filter((p, i) => i > 0 && p.type === 'static' && p !== demoTarget);
+            if (still.length) {
+                const p = still[randInt(0, still.length - 1)];
+                p.driftTo = randInt(p.minX, p.maxX);
+            }
+        }
+
+        // Fell past the target (it moved, or the hop came up short): save it
+        // by heading for the nearest platform still below
+        if (player.velocityY > 0 && player.y + PLAYER_HEIGHT > demoTarget.y) {
+            const below = platforms.filter(p => p.y > player.y + PLAYER_HEIGHT);
+            const px = player.x + PLAYER_WIDTH / 2;
+            const dist = p => Math.abs(p.x + p.width / 2 - px) + (p.y - player.y) * 0.5;
+            if (below.length) {
+                demoTarget = below.reduce((a, b) => (dist(b) < dist(a) ? b : a));
+                demoAimX = 0;
+                demoWrap = false;
+            }
+        }
+
+        // Steer for the aim point on the target platform, the short way or round the edge
+        const step = DEMO_STEP;
+        let delta = demoTarget.x + demoTarget.width / 2 + demoAimX - (player.x + PLAYER_WIDTH / 2);
+        if (demoWrap) delta -= Math.sign(delta) * (CANVAS_WIDTH + PLAYER_WIDTH);
+        player.x += Math.sign(delta) * Math.min(Math.abs(delta), step);
+        if (player.x + PLAYER_WIDTH < 0) { player.x = CANVAS_WIDTH; demoWrap = false; }
+        if (player.x > CANVAS_WIDTH)     { player.x = -PLAYER_WIDTH; demoWrap = false; }
+
+        const prevBottom = player.y + PLAYER_HEIGHT;
+        player.velocityY += GRAVITY;
+        player.y += player.velocityY;
+        const currBottom = player.y + PLAYER_HEIGHT;
+
+        if (player.velocityY > 0) {
+            for (const p of platforms) {
+                const crossedTop    = prevBottom <= p.y && currBottom >= p.y;
+                const horizontalHit = player.x + PLAYER_WIDTH > p.x && player.x < p.x + p.width;
+                if (crossedTop && horizontalHit) {
+                    player.y = p.y - PLAYER_HEIGHT;
+                    player.velocityY = DEMO_BOUNCE_VELOCITY;
+                    demoTarget = pickDemoTarget(p);
+                    break;
+                }
+            }
+        }
+
+        // Gold: grabbed silently with a sparkle, and new pieces keep popping up
+        for (const p of platforms) {
+            if (!p.coin) continue;
+            const cx = p.x + p.width / 2;
+            const cy = p.y - COIN_OFFSET_Y;
+            if (player.x < cx + 10 && player.x + PLAYER_WIDTH > cx - 10 &&
+                player.y < cy + 10 && player.y + PLAYER_HEIGHT > cy - 10) {
+                p.coin = null;
+                spawnParticles('pickup', cx, cy, 8);
+            }
+        }
+        const coinCount = platforms.filter(p => p.coin).length;
+        if (coinCount < DEMO_MAX_COINS && --demoCoinTimer <= 0) {
+            spawnDemoCoin();
+            demoCoinTimer = randInt(...DEMO_COIN_DELAY);
+        }
+
+        // Missed somehow: start over with a fresh layout
+        if (player.y > CANVAS_HEIGHT) enterDemo();
     }
 
     // ─── Drawing helpers ──────────────────────────────────────────────────────
@@ -1677,6 +1879,7 @@ export function createGame(canvas) {
             // Always snapshot, so once the game stops, previous == current and nothing drifts
             savePreviousPositions();
             if (gameState === 'running') update();
+            else if (gameState === 'idle') updateDemo();
             accumulator -= STEP_MS;
             steps++;
         }
@@ -1720,6 +1923,17 @@ export function createGame(canvas) {
     function toMenu() {
         gameState = 'idle';
         reset(); // reset sets state, emits idle snapshot internally
+        enterDemo();
+    }
+
+    // Rewarded ad watched at game over: bank this run's gold a second time (once)
+    function claimRunGoldBonus() {
+        if (gameState !== 'gameover' || runBonusClaimed || runGoldEarned <= 0) return 0;
+        runBonusClaimed = true;
+        gold = addGold(runGoldEarned);
+        checkRich();
+        emit();
+        return runGoldEarned;
     }
 
     function subscribe(fn) {
@@ -1737,6 +1951,7 @@ export function createGame(canvas) {
             justUnlocked,
             gold,
             justSaved,
+            runGold: runGoldEarned,
         };
     }
 
@@ -1758,11 +1973,8 @@ export function createGame(canvas) {
     breakableExtraLandings    = getBreakableGripLevel();
     backupJetpackArmed        = hasBackupJetpack();
 
-    // Pre-init platforms/player so draw() has valid data even before reset()
-    const _initW     = platformWidth(0);
-    const _starterY  = CANVAS_HEIGHT - 40;
-    platforms = [{ x: Math.floor((CANVAS_WIDTH - _initW) / 2), y: _starterY, width: _initW, type: 'static' }];
-    player    = { x: Math.floor((CANVAS_WIDTH - PLAYER_WIDTH) / 2), y: _starterY - PLAYER_HEIGHT, velocityY: 0 };
+    // The title screen opens on the hopping demo (reset() replaces it when a run starts)
+    enterDemo();
 
-    return { start, startLoop, stop, reset, toMenu, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot };
+    return { start, startLoop, stop, reset, toMenu, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot, claimRunGoldBonus };
 }

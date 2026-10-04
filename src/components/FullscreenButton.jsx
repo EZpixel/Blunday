@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { isNativeApp } from '../game/device.js';
 
 // Safari (including iPadOS) still only ships the webkit-prefixed Fullscreen API.
 // iPhone Safari has none for regular elements, so the button hides itself there.
-const fullscreenSupported = typeof document !== 'undefined'
+// The Android app is always full screen, so it has no button either.
+const fullscreenSupported = !isNativeApp && typeof document !== 'undefined'
     && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
 
 function isFullscreen() {

@@ -8,10 +8,12 @@ import GameOverOverlay from './GameOverOverlay.jsx';
 import AchievementsView from './AchievementsView.jsx';
 import UpgradesView from './UpgradesView.jsx';
 import SettingsView from './SettingsView.jsx';
+import CreditsView from './CreditsView.jsx';
 import SettingsButton from './SettingsButton.jsx';
 import MoveHint from './MoveHint.jsx';
 import FullscreenButton from './FullscreenButton.jsx';
 import { installClickSounds } from '../game/audio.js';
+import { initAds, shouldOfferDouble, showRewardedAd } from '../game/ads.js';
 
 const MOVE_HINT_MS = 10000;
 
@@ -38,6 +40,9 @@ export default function App() {
     const [view, setView] = useState('menu');
     const [toast, setToast] = useState(null);
     const [saveToast, setSaveToast] = useState(false);
+    // Rewarded "2x gold" offer for the current game over: null, or
+    // { state: 'offer' | 'watching' | 'done' | 'failed', amount }
+    const [adOffer, setAdOffer] = useState(null);
     // Start time of a first-ever run (no high score yet); drives the move hint
     const [moveHintRun, setMoveHintRun] = useState(null);
 
@@ -47,22 +52,38 @@ export default function App() {
     const uiRef = useRef(null);
     useEffect(() => { viewRef.current = view; }, [view]);
     useEffect(() => installClickSounds(wrapperRef.current), []);
+    useEffect(() => { initAds(); }, []);
 
     // ── UI scaling — keep the UI layer covering the game area at any size ────
     useEffect(() => {
         const wrapper = wrapperRef.current;
         const ui = uiRef.current;
         if (!wrapper || !ui) return;
+        // Measures the top safe area (camera cutout) through an invisible probe
+        // sized by it, so changes to the inset show up as a resize too
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;width:1px;visibility:hidden;pointer-events:none;'
+            + 'height:var(--safe-area-inset-top, env(safe-area-inset-top, 0px))';
+        document.body.appendChild(probe);
+
         function fitUi() {
             const scale = wrapper.clientWidth / UI_WIDTH;
             if (!scale) return; // not laid out yet
             ui.style.setProperty('--ui-scale', scale);
             ui.style.height = `${wrapper.clientHeight / scale}px`;
+            // The game keeps drawing under the cutout; only the UI steps down,
+            // by however much of the cutout overlaps the game area
+            const overlap = Math.max(0, probe.offsetHeight - wrapper.getBoundingClientRect().top);
+            ui.style.setProperty('--safe-top', `${overlap / scale}px`);
         }
         fitUi();
         const observer = new ResizeObserver(fitUi);
         observer.observe(wrapper);
-        return () => observer.disconnect();
+        observer.observe(probe);
+        return () => {
+            observer.disconnect();
+            probe.remove();
+        };
     }, []);
 
     // ── Main menu handler ─────────────────────────────────────────────────────
@@ -135,7 +156,7 @@ export default function App() {
             if (e.code === 'Space') {
                 e.preventDefault();
                 const state = engine.getSnapshot().gameState;
-                if (state !== 'running' && viewRef.current !== 'achievements' && viewRef.current !== 'upgrades' && viewRef.current !== 'settings') {
+                if (state !== 'running' && viewRef.current === 'menu') {
                     handleStart();
                 }
             }
@@ -238,6 +259,24 @@ export default function App() {
         }
     }, [saveToast]);
 
+    // ── Rewarded ad offer — decided once as each run ends ──────────────────────
+    useEffect(() => {
+        if (snapshot.gameState !== 'gameover') {
+            setAdOffer(null);
+            return;
+        }
+        const runGold = snapshot.runGold || 0;
+        if (shouldOfferDouble(runGold)) setAdOffer({ state: 'offer', amount: runGold });
+    }, [snapshot.gameState]); // only when the state changes, not on every snapshot
+
+    async function handleWatchAd() {
+        setAdOffer(o => ({ ...o, state: 'watching' }));
+        const result = await showRewardedAd(); // 'rewarded' | 'closed' | 'unavailable'
+        const amount = result === 'rewarded' ? engineRef.current?.claimRunGoldBonus() : 0;
+        const state = amount ? 'done' : result === 'closed' ? 'closed' : 'failed';
+        setAdOffer(o => (o ? { ...o, state } : o));
+    }
+
     const { gameState, score, highScore, activeEffects, gold } = snapshot;
 
     return (
@@ -260,17 +299,21 @@ export default function App() {
                         : view === 'upgrades'
                             ? <UpgradesView onBack={() => setView('menu')} />
                             : view === 'settings'
-                                ? <SettingsView onBack={() => setView('menu')} />
-                                : <StartOverlay onPlay={handleStart} onAchievements={() => setView('achievements')} onUpgrades={() => setView('upgrades')} />
+                                ? <SettingsView onBack={() => setView('menu')} onCredits={() => setView('credits')} />
+                                : view === 'credits'
+                                    ? <CreditsView onBack={() => setView('settings')} />
+                                    : <StartOverlay onPlay={handleStart} onAchievements={() => setView('achievements')} onUpgrades={() => setView('upgrades')} />
                 )}
-                {gameState === 'gameover' && view === 'settings' && <SettingsView onBack={() => setView('menu')} />}
-                {gameState === 'gameover' && view !== 'settings' && (
+                {gameState === 'gameover' && view === 'settings' && <SettingsView onBack={() => setView('menu')} onCredits={() => setView('credits')} />}
+                {gameState === 'gameover' && view === 'credits' && <CreditsView onBack={() => setView('settings')} />}
+                {gameState === 'gameover' && view !== 'settings' && view !== 'credits' && (
                     <GameOverOverlay
                         score={score}
                         highScore={highScore}
                         onRestart={handleStart}
                         onUpgrades={handleGameOverUpgrades}
                         onMenu={handleMainMenu}
+                        offer={adOffer && { ...adOffer, onWatch: handleWatchAd }}
                     />
                 )}
                 {toast && <div className="toast">Achievement unlocked: {toast.title}</div>}

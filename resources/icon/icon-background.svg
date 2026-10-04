@@ -1,0 +1,15 @@
+<!-- Blunday app icon, background layer: the game's night-sky gradient with a few
+     soft bubbles, full bleed on the 108x108 adaptive icon grid. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a0a3c"/>
+      <stop offset="1" stop-color="#2a4a7a"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" fill="url(#sky)"/>
+  <circle cx="32" cy="34" r="5" fill="#fff" opacity="0.10"/>
+  <circle cx="76" cy="28" r="3" fill="#fff" opacity="0.12"/>
+  <circle cx="80" cy="48" r="6.5" fill="#fff" opacity="0.07"/>
+  <circle cx="27" cy="58" r="2.5" fill="#fff" opacity="0.12"/>
+</svg>

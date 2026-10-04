@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 // Mobile OS detection (Android, iOS, iPadOS), used to pick touch vs keyboard hints.
 // iPadOS Safari reports itself as a Mac, so a "Mac" with a touchscreen is an iPad.
 function detectMobile() {
@@ -9,3 +11,7 @@ function detectMobile() {
 }
 
 export const isMobile = detectMobile();
+
+// Running inside the installed Capacitor app (Android), not a browser
+export const isNativeApp = Capacitor.isNativePlatform();
+if (isNativeApp && typeof document !== 'undefined') document.documentElement.classList.add('native-app');
