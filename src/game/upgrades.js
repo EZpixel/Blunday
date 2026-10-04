@@ -81,7 +81,7 @@ export const UPGRADES = Object.freeze([
         title:         'Ctrl+Z Jetpack',
         description:   'Undo one deadly fall per run with an emergency backup jetpack.',
         maxTier:       1,
-        costs:         [1000],
+        costs:         [25000],
         effectPerTier: 1,
     },
     {

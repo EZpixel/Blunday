@@ -250,11 +250,12 @@ export function drawGoldBarGlyph(ctx, cx, cy) {
     ctx.restore();
 }
 
-export function drawRedGemGlyph(ctx, cx, cy) {
+// Cut gem shared by every gem color: body, top facet, left facet
+function _drawGem(ctx, cx, cy, body, top, side) {
     ctx.save();
     ctx.translate(cx, cy);
     // Main diamond body
-    ctx.fillStyle = '#dd2244';
+    ctx.fillStyle = body;
     ctx.beginPath();
     ctx.moveTo(0, -8);
     ctx.lineTo(8, -2);
@@ -263,7 +264,7 @@ export function drawRedGemGlyph(ctx, cx, cy) {
     ctx.closePath();
     ctx.fill();
     // Top facet
-    ctx.fillStyle = '#ff6688';
+    ctx.fillStyle = top;
     ctx.beginPath();
     ctx.moveTo(-4, -3);
     ctx.lineTo(4, -3);
@@ -271,13 +272,92 @@ export function drawRedGemGlyph(ctx, cx, cy) {
     ctx.closePath();
     ctx.fill();
     // Left facet
-    ctx.fillStyle = '#ff88aa';
+    ctx.fillStyle = side;
     ctx.beginPath();
     ctx.moveTo(-8, -2);
     ctx.lineTo(-4, -3);
     ctx.lineTo(0, 9);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+}
+
+export function drawRedGemGlyph(ctx, cx, cy) {
+    _drawGem(ctx, cx, cy, '#dd2244', '#ff6688', '#ff88aa');
+}
+
+export function drawGreenGemGlyph(ctx, cx, cy) {
+    _drawGem(ctx, cx, cy, '#18a650', '#5ee08e', '#8af0b0');
+}
+
+export function drawPurpleGemGlyph(ctx, cx, cy) {
+    _drawGem(ctx, cx, cy, '#8a2be2', '#c27cff', '#d9a8ff');
+}
+
+// Horseshoe magnet: red arms with silver tips, opening upward
+export function drawMagnetGlyph(ctx, cx, cy) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#dd3333';
+    ctx.beginPath();
+    ctx.moveTo(-6, -4);
+    ctx.lineTo(-6, 2);
+    ctx.arc(0, 2, 6, Math.PI, 0, true);
+    ctx.lineTo(6, -4);
+    ctx.stroke();
+    // Pole tips
+    ctx.fillStyle = '#e8eef5';
+    ctx.fillRect(-9, -10, 6, 6);
+    ctx.fillRect(3, -10, 6, 6);
+    // Highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-7.5, -3);
+    ctx.lineTo(-7.5, 2);
+    ctx.stroke();
+    ctx.restore();
+}
+
+// Snapped wooden plank: two halves with grain lines and a jagged break
+export function drawWoodGlyph(ctx, cx, cy) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    for (const [dir, rot] of [[-1, -0.25], [1, 0.25]]) {
+        ctx.save();
+        ctx.translate(dir * 2, 0);
+        ctx.rotate(rot);
+        ctx.fillStyle = '#b06840';
+        ctx.beginPath();
+        if (dir < 0) {
+            ctx.moveTo(-11, -3);
+            ctx.lineTo(-1, -3);
+            ctx.lineTo(-2.5, -0.5);
+            ctx.lineTo(-0.5, 1);
+            ctx.lineTo(-2, 3);
+            ctx.lineTo(-11, 3);
+        } else {
+            ctx.moveTo(11, -3);
+            ctx.lineTo(1, -3);
+            ctx.lineTo(-0.5, -0.5);
+            ctx.lineTo(1.5, 1);
+            ctx.lineTo(0, 3);
+            ctx.lineTo(11, 3);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#6a3214';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(dir * 3, -1);
+        ctx.lineTo(dir * 10, -1);
+        ctx.moveTo(dir * 4, 1.5);
+        ctx.lineTo(dir * 9, 1.5);
+        ctx.stroke();
+        ctx.restore();
+    }
     ctx.restore();
 }
 

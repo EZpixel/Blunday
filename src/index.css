@@ -164,6 +164,10 @@ body {
     background: linear-gradient(90deg, #4466cc, #88aaff);
 }
 
+.effect-bar-fill.magnet {
+    background: linear-gradient(90deg, #cc2233, #ff7a8a);
+}
+
 /* Overlays (start / game over) */
 .overlay {
     position: absolute;

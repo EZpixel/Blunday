@@ -1,20 +1,21 @@
 import { getSettings, subscribeSettings } from './settings.js';
 
-// Each sound lists its variants (files in public/sfx/). When a sound has more
-// than one, a random variant is picked each time it starts.
+// Each sound lists its variants (paths in public/sfx/, without .wav). When a
+// sound has more than one, a random variant is picked each time it starts.
 const SOUNDS = Object.freeze({
-    click:    ['Click'],
-    upgrade:  ['Upgrade1'],
-    boots:    ['Boots1', 'Boots2'],
-    star:     ['Star1'],
-    coin:     ['Coin1'],
-    jump:     ['Jump1'],
-    achievement: ['Achievement1', 'Achievement2', 'Achievement3', 'Achievement4'],
-    jetpack:  ['Jetpack1'],
-    umbrella: ['Umbrella1'],
-    wood:     ['WoodPlatform1'],
-    fall:     ['Fall1'],
-    fart:     ['Fart'],
+    click:    ['ui/Click'],
+    upgrade:  ['ui/Upgrade1'],
+    boots:    ['powerups/boots/Boots1', 'powerups/boots/Boots2'],
+    star:     ['powerups/star/Star1'],
+    coin:     ['gold/Coin1'],
+    jump:     ['player/Jump1'],
+    achievement: ['achievements/Achievement1', 'achievements/Achievement2', 'achievements/Achievement3', 'achievements/Achievement4'],
+    jetpack:  ['powerups/jetpack/Jetpack1'],
+    umbrella: ['powerups/umbrella/Umbrella1'],
+    magnet:   ['powerups/magnet/MagneticField'],
+    wood:     ['platforms/WoodPlatform1'],
+    fall:     ['gameover/Fall1'],
+    fart:     ['gameover/Fart'],
 });
 
 const LOOP_FADE_S = 0.08; // fade-out when a loop stops, so it doesn't pop

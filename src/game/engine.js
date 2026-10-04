@@ -1,9 +1,11 @@
 import { unlock } from './achievements.js';
-import { getGold, addGold, getTotalEarned } from './wallet.js';
+import { getGold, addGold } from './wallet.js';
+import { incrementStat } from './stats.js';
 import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, hasBoosterLiftOff, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
 import { playSfx, pickVariant, setLoop, stopAllLoops } from './audio.js';
 import { isExperimental } from './settings.js';
-import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawUmbrellaGlyph } from './glyphs.js';
+import { createSpaceBackground } from './background.js';
+import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawGreenGemGlyph, drawPurpleGemGlyph, drawUmbrellaGlyph, drawMagnetGlyph } from './glyphs.js';
 
 // ─── Coordinate Convention ───────────────────────────────────────────────────
 // World-y increases DOWNWARD (standard canvas default).
@@ -44,6 +46,30 @@ const BOOTS_BOUNCE_VELOCITY    = -18;    // stronger bounce when boots active
 const STAR_SCORE_BONUS         = 500;
 const STAR_DURATION_FRAMES     = 300;
 const UMBRELLA_DURATION_FRAMES = 300;
+const MAGNET_DURATION_FRAMES   = 300;
+const MAGNET_RADIUS            = 150;    // gold within this distance of the player flies to them
+const MAGNET_KICK              = 3;      // speed gold leaves its platform with
+const MAGNET_PULL              = 1.2;    // speed gained per frame while flying
+const MAGNET_MAX_SPEED         = 12;     // relative to the player, who it moves along with
+const MAGNET_COLLECT_RADIUS    = 18;
+
+// Lifetime achievement targets
+const WOOD_ACH_COUNT = 1000;
+const STAR_ACH_COUNT = 1000;
+const RICH_ACH_GOLD  = 100000;
+
+// Experimental platforms: rare, and only from this score on
+const SPECIAL_PLATFORM_SCORE = 30000;
+const INVERT_CHANCE          = 0.04;
+const ONE_WAY_CHANCE         = 0.04;
+const ONE_WAY_GAP_MAX        = 110;  // keeps the hop around a one-way platform and back on top comfortable
+const ONE_WAY_SIDE_CLEARANCE = 60;   // max extra sidestep from the platform below to a one-way platform
+
+// Experimental gem tiers (see goldDistribution)
+const GREEN_GEM_SCORE      = 200000;
+const GREEN_GEM_FULL_SCORE = 250000;
+const PURPLE_GEM_SCORE     = 300000;
+const PURPLE_GEM_FULL_SCORE = 500000;
 
 // Booster Ignition & Lift Off upgrade: twin rockets carry the player from the
 // starter platform to BOOSTER_TARGET_SCORE at the start of every run
@@ -56,7 +82,7 @@ const BOOSTER_PACK_WIDTH      = 12;    // one pack strapped to each side of the 
 const BOOSTER_PACK_HEIGHT     = 32;    // nose cone tip to nozzle exit
 
 // Power-ups whose sound loops for as long as the effect is active
-const LOOPED_EFFECT_SOUNDS = ['jetpack', 'umbrella'];
+const LOOPED_EFFECT_SOUNDS = ['jetpack', 'umbrella', 'magnet'];
 // Power-ups whose sound plays on each landing instead of at pickup
 const LANDING_EFFECT_SOUNDS = ['boots'];
 
@@ -85,6 +111,13 @@ export function createGame(canvas) {
     let score30kAchAwarded = false;
     let score100kAchAwarded = false;
     let richAchAwarded = false; // skips further checks once unlocked this session
+    let noGoldAchChecked = false;  // per run: the 10k "no gold" / "no power-ups" checks
+    let noPowerAchChecked = false;
+    let runGoldPickups = 0;
+    let runUsedPowerUp = false;
+    let experimental = false;      // Experimental Mode, latched per run
+    let controlsInverted = false;  // set by landing on an invert platform
+    let flyingGold = [];           // gold pulled off its platform by the magnet: { type, amount, x, y, ox, oy, speed }
     let moveSpeedMultiplier = 1;
     let jetpackDurationMultiplier = 1;
     let starGoldMultiplier = 1;
@@ -170,27 +203,30 @@ export function createGame(canvas) {
         return a + (b - a) * t;
     }
 
+    // Odds per GOLD_TYPES entry at score s
     function goldDistribution(s) {
-        const V10  = [0.70, 0.30, 0,    0];
-        const V30  = [0.30, 0.30, 0.40, 0];    // red gems only start appearing past 30k
-        const V100 = [0,    0,    0,    1];
-        if (s < 10000) return [1, 0, 0, 0];
-        if (s <= 30000) {
-            const t = (s - 10000) / 20000;
-            return V10.map((v, i) => lerp(v, V30[i], t));
-        }
-        if (s <= 100000) {
-            const t = (s - 30000) / 70000;
-            return V30.map((v, i) => lerp(v, V100[i], t));
-        }
-        return V100;
+        const V10  = [0.70, 0.30, 0,    0, 0, 0];
+        const V30  = [0.30, 0.30, 0.40, 0, 0, 0];    // red gems only start appearing past 30k
+        const RED    = [0, 0, 0, 1, 0, 0];
+        const GREEN  = [0, 0, 0, 0, 1, 0];
+        const PURPLE = [0, 0, 0, 0, 0, 1];
+        const mix = (a, b, t) => a.map((v, i) => lerp(v, b[i], Math.min(Math.max(t, 0), 1)));
+        if (s < 10000) return [1, 0, 0, 0, 0, 0];
+        if (s <= 30000)  return mix(V10, V30, (s - 10000) / 20000);
+        if (s <= 100000) return mix(V30, RED, (s - 30000) / 70000);
+        // Experimental: green gems take over from red, then purple from green
+        if (!experimental || s < GREEN_GEM_SCORE) return RED;
+        if (s < PURPLE_GEM_SCORE) return mix(RED, GREEN, (s - GREEN_GEM_SCORE) / (GREEN_GEM_FULL_SCORE - GREEN_GEM_SCORE));
+        return mix(GREEN, PURPLE, (s - PURPLE_GEM_SCORE) / (PURPLE_GEM_FULL_SCORE - PURPLE_GEM_SCORE));
     }
 
     const GOLD_TYPES = [
-        { type: 'coin', amount: 1   },
-        { type: 'bag',  amount: 5   },
-        { type: 'bar',  amount: 50  },
-        { type: 'gem',  amount: 100 },
+        { type: 'coin',      amount: 1    },
+        { type: 'bag',       amount: 5    },
+        { type: 'bar',       amount: 50   },
+        { type: 'gem',       amount: 100  },
+        { type: 'greenGem',  amount: 500  },
+        { type: 'purpleGem', amount: 1000 },
     ];
 
     function pickGoldType(s) {
@@ -229,7 +265,7 @@ export function createGame(canvas) {
     }
 
     function effectsSnapshot() {
-        const order = ['booster', 'jetpack', 'boots', 'umbrella', 'star'];
+        const order = ['booster', 'jetpack', 'boots', 'umbrella', 'star', 'magnet'];
         return order
             .filter(t => activeEffects[t])
             .map(t => ({ type: t, remaining: activeEffects[t].remaining, total: activeEffects[t].total }));
@@ -252,23 +288,23 @@ export function createGame(canvas) {
         if (s >= 5000) {
             return { gapMin: 105, gapMax: 120, movingChance: 0.45, breakChance: 0.25,
                      powerUpChance: 0.097, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
-                     jetpackWeight: 2, bootsWeight: 3, starWeight: 5, umbrellaWeight: 3 };
+                     jetpackWeight: 2, bootsWeight: 3, starWeight: 5, umbrellaWeight: 3, magnetWeight: 3 };
         } else if (s >= 3000) {
             return { gapMin: 100, gapMax: 115, movingChance: 0.35, breakChance: 0.15,
                      powerUpChance: 0.072, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
-                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
+                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3, magnetWeight: 3 };
         } else if (s >= 1500) {
             return { gapMin: 90,  gapMax: 110, movingChance: 0.20, breakChance: 0.00,
                      powerUpChance: 0.05, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
-                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
+                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3, magnetWeight: 3 };
         } else if (s >= 500) {
             return { gapMin: 80,  gapMax: 100, movingChance: 0.00, breakChance: 0.00,
                      powerUpChance: 0.04, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
-                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
+                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3, magnetWeight: 3 };
         } else {
             return { gapMin: 70,  gapMax: 90, movingChance: 0.00, breakChance: 0.00,
                      powerUpChance: 0.04, // pre-divided by P(static)=(1-movingChance)*(1-breakChance) to yield ~4% effective per-platform spawn rate
-                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3 };
+                     jetpackWeight: 2, bootsWeight: 4, starWeight: 4, umbrellaWeight: 3, magnetWeight: 3 };
         }
     }
 
@@ -313,6 +349,7 @@ export function createGame(canvas) {
     }
 
     function igniteBooster() {
+        runUsedPowerUp = true;
         activeEffects.booster = {
             type:      'booster',
             remaining: BOOSTER_TARGET_SCORE,
@@ -390,26 +427,51 @@ export function createGame(canvas) {
     }
 
     // ─── Spawn ────────────────────────────────────────────────────────────────
+    // A one-way platform is solid from below, so the player has to hop up beside
+    // it and come down on top. It sits fully clear of the platform below (so a
+    // straight bounce from there never bonks into it) but close enough to step
+    // over onto. Returns null when there's no room on either side.
+    function oneWayX(below, width) {
+        const options = [];
+        const leftMax  = below.x - PLAYER_WIDTH - width;            // right edge clear of the player standing on the left end
+        const rightMin = below.x + below.width + PLAYER_WIDTH;      // left edge clear of the player standing on the right end
+        if (leftMax >= 0) options.push(randInt(Math.max(0, leftMax - ONE_WAY_SIDE_CLEARANCE), leftMax));
+        if (rightMin + width <= CANVAS_WIDTH) options.push(randInt(rightMin, Math.min(CANVAS_WIDTH - width, rightMin + ONE_WAY_SIDE_CLEARANCE)));
+        return options.length ? options[randInt(0, options.length - 1)] : null;
+    }
+
     function spawnPlatformAbove(topmostY) {
         const diff  = getDifficulty(score);
-        const newY  = topmostY - randInt(diff.gapMin, diff.gapMax);
+        const below = platforms[platforms.length - 1]; // the topmost platform so far
+        let   newY  = topmostY - randInt(diff.gapMin, diff.gapMax);
         const width = platformWidth(score);
-        const x     = randInt(0, CANVAS_WIDTH - width);
+        let   x     = randInt(0, CANVAS_WIDTH - width);
 
         let type = 'static';
-        let vx;
-        let broken;
 
-        if (Math.random() < diff.movingChance) {
-            type = 'moving';
-            vx   = (Math.random() < 0.5 ? -1 : 1) * randRange(1, 2);
-        } else if (Math.random() < diff.breakChance) {
-            type   = 'breakable';
-            broken = false;
+        const special = experimental && score >= SPECIAL_PLATFORM_SCORE;
+        const roll = Math.random();
+        if (special && roll < INVERT_CHANCE) {
+            type = 'invert';
+        } else if (special && roll < INVERT_CHANCE + ONE_WAY_CHANCE && below && (below.type === 'static' || below.type === 'breakable')) {
+            // Only above a platform that stays put, so the sidestep is predictable
+            const ox = oneWayX(below, width);
+            if (ox !== null) {
+                type = 'oneWay';
+                x    = ox;
+                newY = Math.max(newY, topmostY - Math.min(diff.gapMax, ONE_WAY_GAP_MAX));
+            }
+        }
+        if (type === 'static') {
+            if (Math.random() < diff.movingChance) {
+                type = 'moving';
+            } else if (Math.random() < diff.breakChance) {
+                type = 'breakable';
+            }
         }
 
         const platform = { x, y: newY, width, type };
-        if (type === 'moving')    platform.vx = vx;
+        if (type === 'moving')    platform.vx = (Math.random() < 0.5 ? -1 : 1) * randRange(1, 2);
         if (type === 'breakable') {
             platform.broken = false;
             platform.landingsLeft = 1 + breakableExtraLandings;
@@ -418,18 +480,18 @@ export function createGame(canvas) {
         // Power-ups: static platforms only (amendment #1)
         const effectiveChance = Math.min(diff.powerUpChance * getPowerUpFreqMultiplier(), 0.5);
         if (type === 'static' && Math.random() < effectiveChance) {
-            const { jetpackWeight, bootsWeight, starWeight, umbrellaWeight } = diff;
-            const total = jetpackWeight + bootsWeight + starWeight + umbrellaWeight;
-            const roll  = Math.random() * total;
-            let puType;
-            if (roll < jetpackWeight) {
-                puType = 'jetpack';
-            } else if (roll < jetpackWeight + bootsWeight) {
-                puType = 'boots';
-            } else if (roll < jetpackWeight + bootsWeight + starWeight) {
-                puType = 'star';
-            } else {
-                puType = 'umbrella';
+            const weights = [
+                ['jetpack',  diff.jetpackWeight],
+                ['boots',    diff.bootsWeight],
+                ['star',     diff.starWeight],
+                ['umbrella', diff.umbrellaWeight],
+                ['magnet',   experimental ? diff.magnetWeight : 0],
+            ];
+            let pick = Math.random() * weights.reduce((sum, [, w]) => sum + w, 0);
+            let puType = weights[0][0];
+            for (const [t, w] of weights) {
+                if (pick < w) { puType = t; break; }
+                pick -= w;
             }
             platform.powerUp = { type: puType, collected: false };
         }
@@ -449,6 +511,25 @@ export function createGame(canvas) {
 
     // ─── Achievement helper ───────────────────────────────────────────────────
     function tryUnlock(id) { const def = unlock(id); if (def) justUnlocked.push(def); }
+
+    // ─── Gold ─────────────────────────────────────────────────────────────────
+    // Banks a gold pickup ({ type, amount }) touched directly or pulled in by the magnet
+    function collectGold(g) {
+        const gain = activeEffects.star ? Math.round(g.amount * starGoldMultiplier) : g.amount;
+        gold = addGold(gain);
+        runGoldPickups++;
+        playSfx('coin');
+        spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 6);
+        if (g.type === 'bag')      tryUnlock('gold_bag');
+        else if (g.type === 'bar') tryUnlock('gold_bar');
+        else if (g.type === 'gem') tryUnlock('red_gem');
+        checkRich();
+    }
+
+    // "I Can Fall Now" is about gold in the wallet, not lifetime earnings
+    function checkRich() {
+        if (!richAchAwarded && gold >= RICH_ACH_GOLD) { richAchAwarded = true; tryUnlock('gold_100000'); }
+    }
 
     // ─── Reset ────────────────────────────────────────────────────────────────
     function reset() {
@@ -470,6 +551,13 @@ export function createGame(canvas) {
         scoreAchAwarded           = false;
         score30kAchAwarded        = false;
         score100kAchAwarded       = false;
+        noGoldAchChecked          = false;
+        noPowerAchChecked         = false;
+        runGoldPickups            = 0;
+        runUsedPowerUp            = false;
+        experimental              = isExperimental();
+        controlsInverted          = false;
+        flyingGold                = [];
         backupJetpackArmed        = hasBackupJetpack();
         moveSpeedMultiplier       = getMoveSpeedMultiplier();
         jetpackDurationMultiplier = getJetpackFuelMultiplier();
@@ -505,6 +593,7 @@ export function createGame(canvas) {
         }
 
         if (areAllUpgradesMaxed()) tryUnlock('all_maxed');
+        checkRich();
         emit(); // amendment #2: emit after reset so HUD clears immediately
     }
 
@@ -528,16 +617,31 @@ export function createGame(canvas) {
     }
 
     // ─── Physics Helpers ──────────────────────────────────────────────────────
+    // Touch steering heads for the finger, which alone can never cross the screen
+    // edge. A finger held this close to an edge instead keeps walking that way,
+    // so the player wraps around just like holding an arrow key.
+    const TOUCH_EDGE_ZONE = 32;
+
     function moveHorizontal() {
         const step = MOVE_SPEED * moveSpeedMultiplier;
+        // Inverted controls mirror the input: left is right, and the finger
+        // target is reflected across the screen
+        const dir = controlsInverted ? -1 : 1;
 
         if (dragTargetX !== null) {
-            const playerCenter = player.x + PLAYER_WIDTH / 2;
-            const delta = dragTargetX - playerCenter;
-            player.x += Math.sign(delta) * Math.min(Math.abs(delta), step);
+            const target = controlsInverted ? CANVAS_WIDTH - dragTargetX : dragTargetX;
+            if (target < TOUCH_EDGE_ZONE) {
+                player.x -= step;
+            } else if (target > CANVAS_WIDTH - TOUCH_EDGE_ZONE) {
+                player.x += step;
+            } else {
+                const playerCenter = player.x + PLAYER_WIDTH / 2;
+                const delta = target - playerCenter;
+                player.x += Math.sign(delta) * Math.min(Math.abs(delta), step);
+            }
         } else {
-            if (input.left)  player.x -= step;
-            if (input.right) player.x += step;
+            if (input.left)  player.x -= step * dir;
+            if (input.right) player.x += step * dir;
         }
 
         if (player.x + PLAYER_WIDTH < 0) player.x = CANVAS_WIDTH;
@@ -568,7 +672,14 @@ export function createGame(canvas) {
                     platform.landingsLeft = (platform.landingsLeft !== undefined ? platform.landingsLeft : 1) - 1;
                     if (platform.landingsLeft <= 0) {
                         platform.broken = true;
+                        if (incrementStat('woodBroken') >= WOOD_ACH_COUNT) tryUnlock('wood_1000');
                     }
+                }
+                // Invert platforms flip the controls until landing anywhere else
+                const wasInverted = controlsInverted;
+                controlsInverted = platform.type === 'invert';
+                if (controlsInverted && !wasInverted) {
+                    spawnParticles('invert', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 10);
                 }
                 // Boots replace the jump sound (with the variant locked at pickup)
                 // and still play alongside the breaking-wood sound.
@@ -580,6 +691,27 @@ export function createGame(canvas) {
             }
         }
         return null;
+    }
+
+    // One-way platforms are solid from below: rising into one bonks the
+    // player's head on its underside and they drop back down.
+    function checkCeiling(prevTop, currTop) {
+        if (player.velocityY >= 0) return;
+        for (const platform of platforms) {
+            if (platform.type !== 'oneWay') continue;
+            const bottom = platform.y + PLATFORM_HEIGHT;
+            const crossedBottom = prevTop >= bottom && currTop < bottom;
+            const horizontalHit =
+                player.x + PLAYER_WIDTH > platform.x &&
+                player.x < platform.x + platform.width;
+            if (crossedBottom && horizontalHit) {
+                player.y = bottom;
+                player.velocityY = 1;
+                platform.bonk = 1; // brief shake, see draw()
+                spawnParticles('bonk', player.x + PLAYER_WIDTH / 2, bottom, 5);
+                return;
+            }
+        }
     }
 
     // ─── Gaze ─────────────────────────────────────────────────────────────────
@@ -654,6 +786,7 @@ export function createGame(canvas) {
                     clearExclusiveEffects(); // equal or weaker: replaced by the new one
                 }
                 p.powerUp.collected = true;
+                runUsedPowerUp = true;
                 playPowerUpSound(p.powerUp.type, alreadyActive);
                 if (p.powerUp.type === 'jetpack') {
                     const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
@@ -671,18 +804,37 @@ export function createGame(canvas) {
                     activeEffects.star = { type: 'star', remaining: STAR_DURATION_FRAMES, total: STAR_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 12);
                     tryUnlock('star');
+                    if (incrementStat('starsCollected') >= STAR_ACH_COUNT) tryUnlock('star_1000');
                 } else if (p.powerUp.type === 'umbrella') {
                     activeEffects.umbrella = { type: 'umbrella', remaining: UMBRELLA_DURATION_FRAMES, total: UMBRELLA_DURATION_FRAMES };
+                    spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
+                } else if (p.powerUp.type === 'magnet') {
+                    // Stacks with everything, like the star
+                    activeEffects.magnet = { type: 'magnet', remaining: MAGNET_DURATION_FRAMES, total: MAGNET_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
                 }
             }
         }
 
         // Coin collection: AABB check each frame
+        const magnet = !!activeEffects.magnet;
+        const playerCx = player.x + PLAYER_WIDTH / 2;
+        const playerCy = player.y + PLAYER_HEIGHT / 2;
         for (const p of platforms) {
             if (!p.coin || p.coin.collected) continue;
-            const coinX = p.x + p.width / 2 - 10; // centered 20px wide
-            const coinY = p.y - COIN_OFFSET_Y - 10;
+            const coinCx = p.x + p.width / 2;
+            const coinCy = p.y - COIN_OFFSET_Y;
+
+            // Magnet: gold in range leaves its platform and flies to the player
+            if (magnet && Math.hypot(coinCx - playerCx, coinCy - playerCy) < MAGNET_RADIUS) {
+                flyingGold.push({ type: p.coin.type, amount: p.coin.amount, x: coinCx, y: coinCy,
+                                  ox: coinCx - playerCx, oy: coinCy - playerCy, speed: MAGNET_KICK });
+                p.coin = null;
+                continue;
+            }
+
+            const coinX = coinCx - 10; // centered 20px wide
+            const coinY = coinCy - 10;
             const coinW = 20;
             const coinH = 20;
 
@@ -694,16 +846,28 @@ export function createGame(canvas) {
 
             if (coinOverlap) {
                 p.coin.collected = true;
-                const gain = activeEffects.star ? Math.round(p.coin.amount * starGoldMultiplier) : p.coin.amount;
-                gold = addGold(gain);
-                playSfx('coin');
-                spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 6);
-                if (p.coin.type === 'bag')      tryUnlock('gold_bag');
-                else if (p.coin.type === 'bar') tryUnlock('gold_bar');
-                else if (p.coin.type === 'gem') tryUnlock('red_gem');
-                if (!richAchAwarded && getTotalEarned() >= 100000) { richAchAwarded = true; tryUnlock('gold_100000'); }
+                collectGold(p.coin);
             }
         }
+
+        // Pulled gold closes in on the player, speeding up as it goes. It's
+        // tracked as an offset from the player, so it keeps up however fast
+        // they're moving and always arrives.
+        flyingGold = flyingGold.filter(g => {
+            const dist = Math.hypot(g.ox, g.oy);
+            if (dist < MAGNET_COLLECT_RADIUS) {
+                collectGold(g);
+                return false;
+            }
+            g.speed = Math.min(g.speed + MAGNET_PULL, MAGNET_MAX_SPEED);
+            const keep = 1 - Math.min(g.speed, dist) / dist;
+            g.ox *= keep;
+            g.oy *= keep;
+            g.x = playerCx + g.ox;
+            g.y = playerCy + g.oy;
+            if (Math.random() < 0.4) emitParticle('pickup', g.x, g.y, randRange(-0.5, 0.5), randRange(-0.5, 0.5), 14, randRange(1.5, 2.5), 0);
+            return true;
+        });
 
         const prevBottom = player.y + PLAYER_HEIGHT;
 
@@ -738,7 +902,8 @@ export function createGame(canvas) {
 
         const currBottom = player.y + PLAYER_HEIGHT;
 
-        checkLanding(prevBottom, currBottom);
+        checkCeiling(prevBottom - PLAYER_HEIGHT, currBottom - PLAYER_HEIGHT);
+        checkLanding(prevBottom, player.y + PLAYER_HEIGHT);
 
         // Camera follows ascent only
         const targetCameraY = player.y - CAMERA_LINE;
@@ -751,6 +916,8 @@ export function createGame(canvas) {
         if (score >= 10000 && !scoreAchAwarded) { scoreAchAwarded = true; tryUnlock('score_10000'); }
         if (score >= 30000 && !score30kAchAwarded) { score30kAchAwarded = true; tryUnlock('score_30000'); }
         if (score >= 100000 && !score100kAchAwarded) { score100kAchAwarded = true; tryUnlock('score_100000'); }
+        if (score >= 10000 && !noGoldAchChecked) { noGoldAchChecked = true; if (runGoldPickups === 0) tryUnlock('no_gold_10000'); }
+        if (score >= 10000 && !noPowerAchChecked) { noPowerAchChecked = true; if (!runUsedPowerUp) tryUnlock('no_power_10000'); }
 
         // Booster bar drains with the distance still to go
         if (booster && booster.ignition === 0) {
@@ -781,6 +948,7 @@ export function createGame(canvas) {
 
         shake *= 0.9;
         flash *= 0.9;
+        for (const p of platforms) if (p.bonk) p.bonk = p.bonk > 0.05 ? p.bonk * 0.85 : 0;
 
         // Star: gold sparkles drifting off the player
         if (activeEffects.star && Math.random() < 0.25) {
@@ -805,6 +973,7 @@ export function createGame(canvas) {
             if (backupJetpackArmed) {
                 backupJetpackArmed = false;
                 justSaved = true;
+                runUsedPowerUp = true;
                 clearExclusiveEffects(); // jetpack outranks boots/umbrella
                 const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
                 activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
@@ -867,6 +1036,9 @@ export function createGame(canvas) {
         bag:      makeSprite(drawCoinBagGlyph),
         bar:      makeSprite(drawGoldBarGlyph),
         gem:      makeSprite(drawRedGemGlyph),
+        greenGem: makeSprite(drawGreenGemGlyph),
+        purpleGem: makeSprite(drawPurpleGemGlyph),
+        magnet:   makeSprite(drawMagnetGlyph),
     };
 
     // Soft radial glows, pre-rendered once because building a radial gradient
@@ -898,6 +1070,9 @@ export function createGame(canvas) {
         umbrella: makeGlowSprite(PICKUP_GLOW_SIZE, '255,90,170',  0.6),
         star:     makeGlowSprite(PICKUP_GLOW_SIZE, '255,215,60',  0.6),
         gem:      makeGlowSprite(PICKUP_GLOW_SIZE, '255,50,50',   0.6),
+        greenGem: makeGlowSprite(PICKUP_GLOW_SIZE, '60,230,120',  0.65),
+        purpleGem: makeGlowSprite(PICKUP_GLOW_SIZE, '190,90,255', 0.7),
+        magnet:   makeGlowSprite(PICKUP_GLOW_SIZE, '255,70,90',   0.6),
     };
 
     // Booster fire: additive glow blobs are much cheaper than per-particle gradients
@@ -944,9 +1119,88 @@ export function createGame(canvas) {
         return grad;
     }
     const bgGrad = makeVerticalGradient(CANVAS_HEIGHT, [[0, '#1a0a3c'], [1, '#2a4a7a']]);
+    const spaceBg = createSpaceBackground(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, RENDER_SCALE);
     const movingPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#6aacee'], [0.4, '#3a7ecc'], [1, '#1a4e9a']]);
     const breakablePlatformGrad = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#c07048'], [1, '#7a3a18']]);
     const staticPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#5eca5e'], [0.3, '#3ca03c'], [1, '#1e6a1e']]);
+    const invertPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#c77dff'], [0.4, '#9b3fe0'], [1, '#5a1a8f']]);
+    const oneWayPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#d8dde6'], [0.45, '#9aa3b2'], [1, '#5c6474']]);
+
+    // Purple invert platform: two arrowheads pointing in at the middle
+    function drawInvertMarks(x, y, w) {
+        const cy = y + PLATFORM_HEIGHT / 2;
+        const mid = x + w / 2;
+        const size = Math.min(4, w / 8);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        for (const side of [-1, 1]) {
+            const tip = mid + side * (size * 0.6);
+            const back = tip + side * size * 1.6;
+            ctx.moveTo(tip, cy);
+            ctx.lineTo(back, cy - size);
+            ctx.lineTo(back, cy + size);
+            ctx.closePath();
+        }
+        ctx.fill();
+    }
+
+    // Steel one-way platform: riveted plate with a hazard-striped underside
+    // that says "not from below"
+    function drawOneWayMarks(x, y, w) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 2, y + PLATFORM_HEIGHT - 4, w - 4, 3);
+        ctx.clip();
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(x, y + PLATFORM_HEIGHT - 4, w, 4);
+        ctx.fillStyle = '#ffcc22';
+        for (let sx = x - 4; sx < x + w; sx += 6) {
+            ctx.beginPath();
+            ctx.moveTo(sx, y + PLATFORM_HEIGHT);
+            ctx.lineTo(sx + 3, y + PLATFORM_HEIGHT - 4);
+            ctx.lineTo(sx + 6, y + PLATFORM_HEIGHT - 4);
+            ctx.lineTo(sx + 3, y + PLATFORM_HEIGHT);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.fillRect(x + 3, y + 1, w - 6, 2);
+        ctx.fillStyle = '#3c4250';
+        for (const rx of [x + 4, x + w - 4]) {
+            ctx.beginPath();
+            ctx.arc(rx, y + 5, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Swirling arrows over the player's head while the controls are inverted
+    function drawInvertedIndicator(cx, topY, now) {
+        const r = 7;
+        const a = now * 0.006;
+        ctx.save();
+        ctx.translate(cx, topY - 12);
+        ctx.rotate(a);
+        ctx.strokeStyle = '#d9a8ff';
+        ctx.fillStyle   = '#d9a8ff';
+        ctx.lineWidth   = 2;
+        for (const start of [0, Math.PI]) {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, start + 0.3, start + Math.PI - 0.3);
+            ctx.stroke();
+            const ex = Math.cos(start + Math.PI - 0.3) * r;
+            const ey = Math.sin(start + Math.PI - 0.3) * r;
+            const tx = -Math.sin(start + Math.PI - 0.3);
+            const ty =  Math.cos(start + Math.PI - 0.3);
+            ctx.beginPath();
+            ctx.moveTo(ex + tx * 4, ey + ty * 4);
+            ctx.lineTo(ex - ty * 3, ey + tx * 3);
+            ctx.lineTo(ex + ty * 3, ey - tx * 3);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+    }
 
     function fillPlatform(grad, x, y, w) {
         ctx.save();
@@ -1126,6 +1380,10 @@ export function createGame(canvas) {
                 const g = Math.floor(100 + 120 * t);
                 const b = 0;
                 ctx.fillStyle = `rgba(${r},${g},${b},${t * 0.8})`;
+            } else if (part.kind === 'invert') {
+                ctx.fillStyle = `rgba(200,130,255,${t})`;
+            } else if (part.kind === 'bonk') {
+                ctx.fillStyle = `rgba(230,235,245,${t})`;
             } else if (part.kind === 'spark') {
                 // Hot white-yellow ember
                 ctx.fillStyle = `rgba(255,${Math.floor(180 + 75 * t)},${Math.floor(120 * t)},${t})`;
@@ -1149,11 +1407,19 @@ export function createGame(canvas) {
         const camY = lerp(prevCameraY, cameraY, alpha);
 
         // ── Background gradient ──
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        // Experimental: the sky changes with height (see background.js)
+        const spaceMode = experimental;
+        if (spaceMode) {
+            spaceBg.drawSky(-camY);
+        } else {
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
 
         ctx.save();
         if (shake > 0.2) ctx.translate(randRange(-shake, shake), randRange(-shake, shake));
+
+        const bubbleAlpha = spaceMode ? spaceBg.drawScenery(-camY, camY, now) : 1;
 
         // ── Parallax soft circles (stars/clouds) ──
         for (const c of bgCircles) {
@@ -1161,7 +1427,7 @@ export function createGame(canvas) {
             const screenY = ((worldY % (CANVAS_HEIGHT * 2)) + CANVAS_HEIGHT * 2) % (CANVAS_HEIGHT * 2);
             ctx.beginPath();
             ctx.arc(c.x, screenY - CANVAS_HEIGHT / 2, c.radius, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${c.opacity})`;
+            ctx.fillStyle = `rgba(255,255,255,${c.opacity * bubbleAlpha})`;
             ctx.fill();
         }
 
@@ -1176,6 +1442,14 @@ export function createGame(canvas) {
                 // Highlight
                 ctx.fillStyle = 'rgba(255,255,255,0.25)';
                 ctx.fillRect(platX + 4, screenY + 1, platform.width - 8, 3);
+            } else if (platform.type === 'invert') {
+                fillPlatform(invertPlatformGrad, platX, screenY, platform.width);
+                drawInvertMarks(platX, screenY, platform.width);
+            } else if (platform.type === 'oneWay') {
+                // Rattles for a moment when bonked from below
+                const wobble = platform.bonk ? Math.sin(now * 0.08) * 2 * platform.bonk : 0;
+                fillPlatform(oneWayPlatformGrad, platX + wobble, screenY, platform.width);
+                drawOneWayMarks(platX + wobble, screenY, platform.width);
             } else if (platform.type === 'breakable') {
                 // Brown cracked look
                 fillPlatform(breakablePlatformGrad, platX, screenY, platform.width);
@@ -1209,6 +1483,15 @@ export function createGame(canvas) {
             }
         }
 
+        // Gold flying to the player under the magnet
+        for (const g of flyingGold) {
+            // Rides along with the player, so it snaps across a screen wrap too
+            const gx = Math.abs(g.x - (g.prevX ?? g.x)) > CANVAS_WIDTH / 2 ? g.x : interp(g.prevX, g.x, alpha);
+            const gy = interp(g.prevY, g.y, alpha) - camY;
+            drawPickupGlow(g.type, gx, gy, 0, now);
+            drawSprite(g.type, gx, gy);
+        }
+
         // ── Player ──
         // Screen wrap teleports the player, so don't blend across it
         const px = Math.abs(player.x - player.prevX) > CANVAS_WIDTH / 2 ? player.x : interp(player.prevX, player.x, alpha);
@@ -1240,6 +1523,20 @@ export function createGame(canvas) {
             ctx.globalAlpha = 0.65 + 0.35 * starPulse;
             ctx.drawImage(glowSprite, px + PLAYER_WIDTH / 2 - size / 2, drawY + drawH / 2 - size / 2, size, size);
             ctx.globalAlpha = 1;
+        }
+
+        // Magnet: faint field rings rippling inward
+        if (activeEffects.magnet) {
+            const cx = px + PLAYER_WIDTH / 2;
+            const cy = drawY + drawH / 2;
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 3; i++) {
+                const t = 1 - ((now * 0.0012 + i / 3) % 1); // shrinks 1 → 0
+                ctx.strokeStyle = `rgba(255,110,130,${0.35 * (1 - t)})`;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 24 + t * (MAGNET_RADIUS - 24), 0, Math.PI * 2);
+                ctx.stroke();
+            }
         }
 
         // Umbrella: held overhead, drawn before the body so the pole tucks behind it
@@ -1318,6 +1615,8 @@ export function createGame(canvas) {
         ctx.fillRect(px + 4,              drawY + drawH - 2, 10, 6);
         ctx.fillRect(px + PLAYER_WIDTH - 14, drawY + drawH - 2, 10, 6);
 
+        if (controlsInverted) drawInvertedIndicator(px + PLAYER_WIDTH / 2, drawY - (activeEffects.umbrella ? UMBRELLA_POLE + UMBRELLA_RADIUS : 0), now);
+
         // ── Particles ──
         drawParticles(camY, alpha, false);
         ctx.restore(); // screen shake
@@ -1347,6 +1646,10 @@ export function createGame(canvas) {
         for (const part of particles) {
             part.prevX = part.x;
             part.prevY = part.y;
+        }
+        for (const g of flyingGold) {
+            g.prevX = g.x;
+            g.prevY = g.y;
         }
     }
 
@@ -1443,6 +1746,7 @@ export function createGame(canvas) {
     coins               = 0;
     activeEffects       = {};
     particles           = [];
+    flyingGold          = [];
     cameraY             = 0;
     justSaved           = false;
     moveSpeedMultiplier       = getMoveSpeedMultiplier();

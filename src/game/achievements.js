@@ -12,10 +12,14 @@ export const ACHIEVEMENTS = Object.freeze([
     { id: 'score_10000',  title: 'Ten Thousand Reasons to Brag',    description: 'Reach a score of 10,000.',                              icon: 'score'   },
     { id: 'score_30000',  title: 'Thirty-K and Thriving',           description: 'Reach a score of 30,000.',                              icon: 'score'   },
     { id: 'score_100000', title: 'Six Figures, Baby',               description: 'Reach a score of 100,000.',                            icon: 'score'   },
+    { id: 'wood_1000',    title: 'Wood You Please Stop?',           description: 'Break 1,000 wooden platforms. The termites are taking notes.', icon: 'wood' },
+    { id: 'star_1000',    title: 'A Star is Born',                  description: 'Collect 1,000 stars.',                                  icon: 'star'    },
+    { id: 'no_gold_10000', title: 'Got Any Spare Change?',          description: 'Reach a score of 10,000 without collecting any gold.',  icon: 'coin'    },
+    { id: 'no_power_10000', title: 'Look Ma, No Power-Ups!',        description: 'Reach a score of 10,000 without any power-ups (boosters and emergency jetpacks count too).', icon: 'score' },
     { id: 'all_maxed',    title: 'Maxed Out and Loving It',         description: 'Fully upgrade every single upgrade.',                   icon: 'crown'   },
     { id: 'jetpack_save', title: 'Emergency Exit Rocket',           description: 'Get saved from certain doom by an emergency jetpack.',  icon: 'jetpack' },
     { id: 'liftoff',      title: 'Houston, We Have a Blunday',      description: 'Blast off on twin boosters straight to 10,000.',        icon: 'booster' },
-    { id: 'gold_100000',  title: 'I Can Fall Now',                  description: 'Collect 100,000 gold in total. You\'re rich, fall in peace.', icon: 'bag' },
+    { id: 'gold_100000',  title: 'I Can Fall Now',                  description: 'Have 100,000 gold in your wallet. You\'re rich, fall in peace.', icon: 'bag' },
 ]);
 
 export function loadUnlocked() {
