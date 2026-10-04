@@ -13,6 +13,7 @@ import SettingsButton from './SettingsButton.jsx';
 import MoveHint from './MoveHint.jsx';
 import FullscreenButton from './FullscreenButton.jsx';
 import { installClickSounds } from '../game/audio.js';
+import { installReliableClicks } from '../game/buttons.js';
 import { initAds, shouldOfferDouble, showRewardedAd } from '../game/ads.js';
 
 const MOVE_HINT_MS = 10000;
@@ -52,6 +53,7 @@ export default function App() {
     const uiRef = useRef(null);
     useEffect(() => { viewRef.current = view; }, [view]);
     useEffect(() => installClickSounds(wrapperRef.current), []);
+    useEffect(() => installReliableClicks(wrapperRef.current), []);
     useEffect(() => { initAds(); }, []);
 
     // ── UI scaling — keep the UI layer covering the game area at any size ────

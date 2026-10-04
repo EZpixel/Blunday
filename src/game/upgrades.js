@@ -88,7 +88,7 @@ export const UPGRADES = Object.freeze([
         id:            'boosterLiftOff',
         icon:          '🔥',
         title:         'Booster Ignition & Lift Off',
-        description:   'Every run starts strapped to twin rockets that blast you straight to 10,000. Houston, we have a Blunday.',
+        description:   'Every run starts strapped to twin rockets that blast you straight to 10,000.',
         maxTier:       1,
         costs:         [100000],
         effectPerTier: 1,

@@ -626,7 +626,8 @@ export function createGame(canvas) {
     // Touch steering heads for the finger, which alone can never cross the screen
     // edge. A finger held this close to an edge instead keeps walking that way,
     // so the player wraps around just like holding an arrow key.
-    const TOUCH_EDGE_ZONE = 32;
+    // Wide enough for a thumb to hold comfortably on either side
+    const TOUCH_EDGE_ZONE = 56;
 
     function moveHorizontal() {
         const step = MOVE_SPEED * moveSpeedMultiplier;
