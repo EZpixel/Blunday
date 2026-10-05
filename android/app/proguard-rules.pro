@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep line numbers so Play Console crash reports show exact source lines.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Capacitor plugin rules come from the capacitor-android library's consumer rules.
+# Google Mobile Ads (AdMob) ships its own consumer rules as well.
