@@ -5,6 +5,7 @@
   "plugins": {
     "SystemBars": {
       "hidden": true,
+      "style": "DARK",
       "initialViewportFitValueHint": "cover"
     }
   }

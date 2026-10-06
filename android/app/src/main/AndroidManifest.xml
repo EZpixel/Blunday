@@ -9,13 +9,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- No orientation lock or size restriction here: large screens rotate and
+             resize freely, and only phones keep to portrait (see MainActivity) -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait"
+            android:resizeableActivity="true"
             android:exported="true">
 
             <intent-filter>
@@ -24,6 +26,12 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Android's game interventions must not cap the frame rate or lower the
+             resolution behind the game's back (see res/xml/game_mode_config.xml) -->
+        <meta-data
+            android:name="android.game_mode_config"
+            android:resource="@xml/game_mode_config" />
 
         <!-- AdMob app ID (see admob_app_id in res/values/strings.xml) -->
         <meta-data
@@ -44,4 +52,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Plays with the arrow keys or A/D too, so Chromebooks without a touch
+         screen can install it -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 </manifest>

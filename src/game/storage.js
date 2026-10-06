@@ -6,6 +6,7 @@ export function clearSaveData() {
         localStorage.removeItem('blundayUpgrades');
         localStorage.removeItem('blundayAchievements');
         localStorage.removeItem('blundayStats');
+        localStorage.removeItem('blundayWardrobe');
     } catch (_) {}
     window.location.reload();
 }

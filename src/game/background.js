@@ -1,4 +1,4 @@
-// Experimental space background. As the player climbs, the sky shifts through
+// Space background. As the player climbs, the sky shifts through
 // the colors of the solar system, a planet drifts past at each milestone (in
 // real order outward from Earth), twinkling stars come out from 70k on, and
 // past Pluto waits a black hole.

@@ -76,7 +76,7 @@ export default function SettingsView({ onBack, onCredits }) {
                 <div className="settings-switch-row">
                     <div>
                         <strong>Experimental Mode</strong>
-                        <span>Unlocks hidden features. Things may get weird.</span>
+                        <span>Brand new features first, like Blunday's feelings and wardrobe. Things may get weird.</span>
                     </div>
                     <button
                         className="settings-switch"

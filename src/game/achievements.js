@@ -1,5 +1,3 @@
-import { playSfx } from './audio.js';
-
 const STORAGE_KEY = 'blundayAchievements';
 
 export const ACHIEVEMENTS = Object.freeze([
@@ -38,13 +36,24 @@ export function isUnlocked(id) {
     return !!loadUnlocked()[id];
 }
 
+// Notified with each newly unlocked achievement's definition, wherever it was
+// unlocked from (a run, the Upgrades screen). The notification, and its sound,
+// is up to the listener.
+const unlockSubscribers = new Set();
+
+export function subscribeUnlocks(fn) {
+    unlockSubscribers.add(fn);
+    return () => unlockSubscribers.delete(fn);
+}
+
 export function unlock(id) {
     const map = loadUnlocked();
     if (map[id]) return null;
     map[id] = true;
     saveUnlocked(map);
-    playSfx('achievement');
-    return ACHIEVEMENTS.find(a => a.id === id) || null;
+    const def = ACHIEVEMENTS.find(a => a.id === id) || null;
+    if (def) for (const fn of unlockSubscribers) fn(def);
+    return def;
 }
 
 export function getAll() {

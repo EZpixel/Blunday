@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ Game Mode. The game runs its own fixed 60 Hz simulation and
+     renders at the display's refresh rate, so the system must not apply its FPS
+     override (a 30/45 fps cap that makes the whole screen look slow) or
+     downscaling interventions to it. It has no battery or performance modes of
+     its own either. -->
+<game-mode-config xmlns:android="http://schemas.android.com/apk/res/android"
+    android:supportsBatteryGameMode="false"
+    android:supportsPerformanceGameMode="false"
+    android:allowGameDownscaling="false"
+    android:allowGameFpsOverride="false" />

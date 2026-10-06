@@ -5,6 +5,9 @@ import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultipl
 import { playSfx, pickVariant, setLoop, stopAllLoops } from './audio.js';
 import { isExperimental } from './settings.js';
 import { createSpaceBackground } from './background.js';
+import { resolveLook, subscribeWardrobe, allowsReaction } from './wardrobe.js';
+import { drawBlunday, hatHeight, BODY_W } from './blunday.js';
+import { createEmotes } from './emotes.js';
 import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoinBagGlyph, drawGoldBarGlyph, drawRedGemGlyph, drawGreenGemGlyph, drawPurpleGemGlyph, drawUmbrellaGlyph, drawMagnetGlyph } from './glyphs.js';
 
 // ─── Coordinate Convention ───────────────────────────────────────────────────
@@ -18,13 +21,15 @@ import { drawJetpackGlyph, drawBootsGlyph, drawStarGlyph, drawCoinGlyph, drawCoi
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// The canvas is rendered at a phone-native 1080x2400 (9:20), but gameplay runs in
-// a 400-unit-wide logical world so physics tuning is independent of resolution.
+// The canvas is rendered at up to a phone-native 1080x2400 (9:20), but gameplay
+// runs in a 400-unit-wide logical world so physics tuning is independent of
+// resolution. Screens that can't show that many pixels get fewer (see
+// pickRenderWidth), down to MIN_RENDER_WIDTH.
 export const RENDER_WIDTH  = 1080;
 export const RENDER_HEIGHT = 2400;
+const MIN_RENDER_WIDTH = 540;
 const CANVAS_WIDTH    = 400;
-const RENDER_SCALE    = RENDER_WIDTH / CANVAS_WIDTH;
-const CANVAS_HEIGHT   = RENDER_HEIGHT / RENDER_SCALE;
+const CANVAS_HEIGHT   = CANVAS_WIDTH * RENDER_HEIGHT / RENDER_WIDTH;
 const GRAVITY         = 0.4;
 const BOUNCE_VELOCITY = -12;
 const PLAYER_WIDTH    = 40;
@@ -58,14 +63,14 @@ const WOOD_ACH_COUNT = 1000;
 const STAR_ACH_COUNT = 1000;
 const RICH_ACH_GOLD  = 100000;
 
-// Experimental platforms: rare, and only from this score on
+// Special platforms (invert, one-way): rare, and only from this score on
 const SPECIAL_PLATFORM_SCORE = 30000;
 const INVERT_CHANCE          = 0.04;
 const ONE_WAY_CHANCE         = 0.04;
 const ONE_WAY_GAP_MAX        = 110;  // keeps the hop around a one-way platform and back on top comfortable
 const ONE_WAY_SIDE_CLEARANCE = 60;   // max extra sidestep from the platform below to a one-way platform
 
-// Experimental gem tiers (see goldDistribution)
+// Gem tiers past red (see goldDistribution)
 const GREEN_GEM_SCORE      = 200000;
 const GREEN_GEM_FULL_SCORE = 250000;
 const PURPLE_GEM_SCORE     = 300000;
@@ -89,9 +94,47 @@ const LANDING_EFFECT_SOUNDS = ['boots'];
 // Parallax background circles
 const BG_CIRCLE_COUNT = 18;
 
+// Emote triggers (Experimental Mode). Each only gives a chance of a reaction;
+// see emotes.js for the pacing.
+const CLOSE_CALL_LINE   = 0.85;  // landing this far down the screen is a close call
+const PANIC_LINE        = 0.72;  // falling past this far down the screen is scary
+const PANIC_SPEED       = 7;
+const LONG_JUMP_DX      = 150;   // sideways travel in one hop that counts as a stretch
+const COMBO_LANDINGS    = 15;    // climbing landings in a row worth celebrating
+const SLEEPY_FRAMES     = 330;   // no steering for this long and Blunday dozes off
+const RICHES_WINDOW     = 150;   // steps over which a pile of riches adds up
+const RICHES_PICKUPS    = 5;
+const RICHES_GOLD       = 300;
+const CALM_EMOTE_CHANCE = 1 / 700; // per step, while nothing else is going on
+const GUM_INFLATE       = 1 / 240; // bubble gum grows to full size in 4 s, then pops
+
+// Title screen cameos (Experimental Mode): now and then a big Blunday peeks
+// in from a side, behind the menu
+const CAMEO_FIRST_DELAY = [480, 900];
+const CAMEO_DELAY       = [1200, 2700];
+const CAMEO_SCALE       = 3;
+const CAMEO_SLIDE       = 36;     // steps to slide in or out
+const PLAY_BUTTON       = { x: 200, y: 363 }; // where the Play button sits, in logical units
+
+// Width to render at: 1080 at most, and no more than the widest the game's 9:20
+// column can get on this screen in either orientation. A lower-resolution phone
+// then isn't filling 2.6 million pixels a frame only for them to be scaled
+// down, which kept its GPU busy (and hot) for nothing.
+function pickRenderWidth() {
+    if (typeof window === 'undefined' || !window.screen) return RENDER_WIDTH;
+    const dpr = window.devicePixelRatio || 1;
+    const short = Math.min(window.screen.width, window.screen.height) * dpr;
+    const long  = Math.max(window.screen.width, window.screen.height) * dpr;
+    const column = Math.min(short, long * RENDER_WIDTH / RENDER_HEIGHT);
+    const width = Math.min(RENDER_WIDTH, Math.max(MIN_RENDER_WIDTH, column));
+    return Math.round(width / 9) * 9; // keeps the height a whole number at exactly 9:20
+}
+
 export function createGame(canvas) {
-    canvas.width  = RENDER_WIDTH;
-    canvas.height = RENDER_HEIGHT;
+    const renderWidth = pickRenderWidth();
+    const RENDER_SCALE = renderWidth / CANVAS_WIDTH;
+    canvas.width  = renderWidth;
+    canvas.height = Math.round(renderWidth * RENDER_HEIGHT / RENDER_WIDTH);
     const ctx = canvas.getContext('2d');
     ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0); // draw in logical units
 
@@ -106,7 +149,6 @@ export function createGame(canvas) {
     let activeEffects; // { [type]: { type, remaining, total } }
     let particles;     // [{ x, y, vx, vy, life, maxLife, size, color, kind }]
     let rafId = null;
-    let justUnlocked = [];
     let scoreAchAwarded = false;
     let score30kAchAwarded = false;
     let score100kAchAwarded = false;
@@ -117,7 +159,7 @@ export function createGame(canvas) {
     let runGoldEarned = 0;         // gold banked this run, for the rewarded "2x gold" ad
     let runBonusClaimed = false;
     let runUsedPowerUp = false;
-    let experimental = false;      // Experimental Mode, latched per run
+    let experimental = false;      // Experimental Mode (fart sound, emotes), latched per run
     let controlsInverted = false;  // set by landing on an invert platform
     let flyingGold = [];           // gold pulled off its platform by the magnet: { type, amount, x, y, ox, oy, speed }
     let moveSpeedMultiplier = 1;
@@ -132,6 +174,24 @@ export function createGame(canvas) {
     let shake = 0; // screen shake amplitude in logical units
     let flash = 0; // full-screen white flash, 0..1
     const gaze = { x: 0, y: 0 }; // pupil direction, each axis -1..1
+
+    // Blunday's look (from the Character screen) and moods
+    let look = resolveLook();
+    subscribeWardrobe(() => { look = resolveLook(); });
+    const emotes = createEmotes({ allowed: id => allowsReaction(look, id) });
+    let propSpin = 0;          // propeller cap angle
+    let gum = 0;               // bubble gum size, 0..1
+    let stepCount = 0;
+    let idleFrames = 0;        // steps without steering
+    let airDx = 0;             // sideways travel since the last landing
+    let lastLandY = 0;
+    let climbCombo = 0;        // landings in a row, each higher than the last
+    let recentGold = [];       // [{ frame, amount }] for the money eyes
+    let houstonDecided = false;
+    let poppinsArmed = false;
+    let titleCameos = false;
+    let cameo = null;          // see updateCameo()
+    let cameoTimer = 0;
     const effectSoundVariant = {}; // one-shot power-up sound variant, kept while the effect is active
 
     // Parallax background circles (seeded once, not reset each run)
@@ -164,14 +224,12 @@ export function createGame(canvas) {
             highScore,
             coins,
             activeEffects: effectsSnapshot(),
-            justUnlocked,
             gold,
             justSaved,
             runGold: runGoldEarned,
         };
         lastEmitKey = snapshotKey();
         for (const fn of subscribers) fn(snap);
-        justUnlocked = []; // each unlock visible in exactly one emitted snapshot
         justSaved = false; // save toast fires for exactly one snapshot
     }
 
@@ -179,7 +237,7 @@ export function createGame(canvas) {
     // 0.5% so they still animate smoothly without re-rendering React every frame.
     let lastEmitKey = '';
     function snapshotKey() {
-        let key = `${gameState}|${score}|${highScore}|${coins}|${gold}|${justUnlocked.length}|${justSaved}`;
+        let key = `${gameState}|${score}|${highScore}|${coins}|${gold}|${justSaved}`;
         for (const t in activeEffects) {
             const e = activeEffects[t];
             key += `|${t}:${Math.ceil((e.remaining / e.total) * 200)}`;
@@ -217,8 +275,8 @@ export function createGame(canvas) {
         if (s < 10000) return [1, 0, 0, 0, 0, 0];
         if (s <= 30000)  return mix(V10, V30, (s - 10000) / 20000);
         if (s <= 100000) return mix(V30, RED, (s - 30000) / 70000);
-        // Experimental: green gems take over from red, then purple from green
-        if (!experimental || s < GREEN_GEM_SCORE) return RED;
+        // Green gems take over from red, then purple from green
+        if (s < GREEN_GEM_SCORE) return RED;
         if (s < PURPLE_GEM_SCORE) return mix(RED, GREEN, (s - GREEN_GEM_SCORE) / (GREEN_GEM_FULL_SCORE - GREEN_GEM_SCORE));
         return mix(GREEN, PURPLE, (s - PURPLE_GEM_SCORE) / (PURPLE_GEM_FULL_SCORE - PURPLE_GEM_SCORE));
     }
@@ -452,7 +510,7 @@ export function createGame(canvas) {
 
         let type = 'static';
 
-        const special = experimental && score >= SPECIAL_PLATFORM_SCORE;
+        const special = score >= SPECIAL_PLATFORM_SCORE;
         const roll = Math.random();
         if (special && roll < INVERT_CHANCE) {
             type = 'invert';
@@ -488,7 +546,7 @@ export function createGame(canvas) {
                 ['boots',    diff.bootsWeight],
                 ['star',     diff.starWeight],
                 ['umbrella', diff.umbrellaWeight],
-                ['magnet',   experimental ? diff.magnetWeight : 0],
+                ['magnet',   diff.magnetWeight],
             ];
             let pick = Math.random() * weights.reduce((sum, [, w]) => sum + w, 0);
             let puType = weights[0][0];
@@ -513,7 +571,8 @@ export function createGame(canvas) {
     }
 
     // ─── Achievement helper ───────────────────────────────────────────────────
-    function tryUnlock(id) { const def = unlock(id); if (def) justUnlocked.push(def); }
+    // The UI hears about unlocks from achievements.js and queues the notifications
+    function tryUnlock(id) { unlock(id); }
 
     // ─── Gold ─────────────────────────────────────────────────────────────────
     // Banks a gold pickup ({ type, amount }) touched directly or pulled in by the magnet
@@ -528,6 +587,21 @@ export function createGame(canvas) {
         else if (g.type === 'bar') tryUnlock('gold_bar');
         else if (g.type === 'gem') tryUnlock('red_gem');
         checkRich();
+        if (experimental) reactToGold(g.type, gain);
+    }
+
+    // Gems make the jaw drop (purple ones the most); a pile of riches in a short
+    // time brings out the money eyes
+    function reactToGold(type, gain) {
+        if (type === 'purpleGem' && emotes.trigger('shocked', { chance: 0.9, intensity: 1, priority: 4, dur: 120, tint: '#e6b8ff', force: true })) return;
+        if (type === 'greenGem' && emotes.trigger('shocked', { chance: 0.5, intensity: 0.7, tint: '#b8ffd0' })) return;
+        if (type === 'gem' && emotes.trigger('shocked', { chance: 0.2, intensity: 0.35, tint: '#ffb0bc' })) return;
+        recentGold.push({ frame: stepCount, amount: gain });
+        recentGold = recentGold.filter(r => stepCount - r.frame < RICHES_WINDOW);
+        const total = recentGold.reduce((sum, r) => sum + r.amount, 0);
+        if ((recentGold.length >= RICHES_PICKUPS || total >= RICHES_GOLD) && emotes.trigger('money', { chance: 0.7 })) {
+            recentGold = [];
+        }
     }
 
     // "I Can Fall Now" is about gold in the wallet, not lifetime earnings
@@ -544,7 +618,6 @@ export function createGame(canvas) {
         coins           = 0;
         activeEffects   = {};
         particles       = [];
-        justUnlocked    = [];
         shake           = 0;
         flash           = 0;
         stopAllLoops();
@@ -563,6 +636,14 @@ export function createGame(canvas) {
         runUsedPowerUp            = false;
         experimental              = isExperimental();
         controlsInverted          = false;
+        emotes.reset();
+        idleFrames                = 0;
+        airDx                     = 0;
+        climbCombo                = 0;
+        recentGold                = [];
+        houstonDecided            = false;
+        poppinsArmed              = false;
+        cameo                     = null;
         flyingGold                = [];
         backupJetpackArmed        = hasBackupJetpack();
         moveSpeedMultiplier       = getMoveSpeedMultiplier();
@@ -591,6 +672,7 @@ export function createGame(canvas) {
             y:         starterPlatform.y - PLAYER_HEIGHT,
             velocityY: 0,
         };
+        lastLandY = starterPlatform.y;
 
         let topmostY = starterPlatform.y;
         while (topmostY >= cameraY - CANVAS_HEIGHT) {
@@ -630,6 +712,7 @@ export function createGame(canvas) {
     const TOUCH_EDGE_ZONE = 56;
 
     function moveHorizontal() {
+        const startX = player.x;
         const step = MOVE_SPEED * moveSpeedMultiplier;
         // Inverted controls mirror the input: left is right, and the finger
         // target is reflected across the screen
@@ -651,8 +734,11 @@ export function createGame(canvas) {
             if (input.right) player.x += step * dir;
         }
 
+        const moved = Math.abs(player.x - startX);
         if (player.x + PLAYER_WIDTH < 0) player.x = CANVAS_WIDTH;
         if (player.x > CANVAS_WIDTH)     player.x = -PLAYER_WIDTH;
+        airDx += moved;
+        idleFrames = moved < 0.01 ? idleFrames + 1 : 0;
     }
 
     function checkLanding(prevBottom, currBottom) {
@@ -694,10 +780,82 @@ export function createGame(canvas) {
                 if (activeEffects.boots) playSfx('boots', effectSoundVariant.boots);
                 else if (!platform.broken) playSfx('jump');
 
+                onLanded(platform, controlsInverted && !wasInverted);
                 return platform;
             }
         }
         return null;
+    }
+
+    // Landing reactions. The bubble gum also pops on impact, sometimes.
+    function onLanded(platform, justInverted) {
+        if (look.face === 'gum' && gum > 0.5 && Math.random() < 0.35) popGum();
+
+        const climbed = platform.y < lastLandY - 5;
+        climbCombo = climbed ? climbCombo + 1 : 0;
+        const longJump = climbed && airDx > LONG_JUMP_DX;
+        const closeCall = player.y + PLAYER_HEIGHT - cameraY > CANVAS_HEIGHT * CLOSE_CALL_LINE;
+        lastLandY = platform.y;
+        airDx = 0;
+        if (!experimental) return;
+
+        if (justInverted) emotes.trigger('dizzy', { chance: 0.7 });
+        else if (platform.broken) emotes.trigger('annoyed', { chance: 0.25 });
+        else if (closeCall) {
+            if (!emotes.trigger('relief', { chance: 0.35, priority: 3 })) emotes.trigger('tongue', { chance: 0.4 });
+        } else if (climbCombo > 0 && climbCombo % COMBO_LANDINGS === 0) emotes.trigger('celebrate', { chance: 0.6 });
+        else if (longJump) emotes.trigger('proud', { chance: 0.35 });
+        else if (activeEffects.boots) emotes.trigger('sproing', { chance: 0.15 });
+    }
+
+    function popGum() {
+        gum = 0;
+        for (let i = 0; i < 6; i++) {
+            const a = Math.random() * Math.PI * 2;
+            emitParticle('gum', player.x + PLAYER_WIDTH / 2, player.y + 26, Math.cos(a) * 1.5, Math.sin(a) * 1.5,
+                         randRange(10, 18), randRange(1.5, 2.5), 0.05, 0.9);
+        }
+    }
+
+    // Per-step accessory animation: the propeller and the bubble gum
+    function updateAccessories() {
+        const flying = activeEffects.jetpack || activeEffects.booster;
+        propSpin += flying ? 0.7 : activeEffects.umbrella ? 0.25 : player.velocityY < -4 ? 0.2 : 0.05;
+        if (look.face === 'gum') {
+            gum += GUM_INFLATE;
+            if (gum >= 1) popGum();
+        }
+    }
+
+    // Lasting moods and quiet-moment reactions during a run
+    function updateEmotes() {
+        const booster = activeEffects.booster;
+        if (booster) {
+            if (!houstonDecided) {
+                houstonDecided = true;
+                emotes.trigger('houston', { chance: 0.8, force: true });
+            }
+            emotes.hold('houston');
+        }
+        if (activeEffects.umbrella && player.velocityY > 1.5) {
+            if (poppinsArmed) {
+                poppinsArmed = false;
+                emotes.trigger('poppins', { chance: 0.6 });
+            }
+            emotes.hold('poppins');
+        }
+        const screenY = player.y + PLAYER_HEIGHT - cameraY;
+        if (!booster && !activeEffects.jetpack && player.velocityY > PANIC_SPEED && screenY > CANVAS_HEIGHT * PANIC_LINE) {
+            emotes.trigger('panic', { chance: 0.06 });
+        }
+        if (idleFrames > SLEEPY_FRAMES) {
+            idleFrames = -SLEEPY_FRAMES; // not again straight away
+            emotes.trigger('sleepy');
+        }
+        if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) {
+            emotes.trigger(Math.random() < 0.75 ? 'smile' : 'tongue');
+        }
+        emotes.update();
     }
 
     // One-way platforms are solid from below: rising into one bonks the
@@ -779,6 +937,7 @@ export function createGame(canvas) {
     }
 
     function update() {
+        stepCount++;
         moveHorizontal();
         updateGaze();
         moveMovingPlatforms();
@@ -816,6 +975,7 @@ export function createGame(canvas) {
                     activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
                     tryUnlock('jetpack');
+                    if (experimental) emotes.trigger('thrust', { chance: 0.6 });
                 } else if (p.powerUp.type === 'boots') {
                     activeEffects.boots = { type: 'boots', remaining: BOOTS_DURATION_FRAMES, total: BOOTS_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
@@ -831,6 +991,7 @@ export function createGame(canvas) {
                 } else if (p.powerUp.type === 'umbrella') {
                     activeEffects.umbrella = { type: 'umbrella', remaining: UMBRELLA_DURATION_FRAMES, total: UMBRELLA_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
+                    poppinsArmed = true;
                 } else if (p.powerUp.type === 'magnet') {
                     // Stacks with everything, like the star
                     activeEffects.magnet = { type: 'magnet', remaining: MAGNET_DURATION_FRAMES, total: MAGNET_DURATION_FRAMES };
@@ -979,6 +1140,8 @@ export function createGame(canvas) {
         }
 
         updateParticles();
+        updateAccessories();
+        if (experimental) updateEmotes();
 
         // Game over / jetpack save
         if (player.y - cameraY > CANVAS_HEIGHT) {
@@ -990,12 +1153,18 @@ export function createGame(canvas) {
                 const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
                 activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
                 player.velocityY = JETPACK_MAX_SPEED;
+                // A fast fall can overshoot the bottom edge by more than the
+                // jetpack climbs in one step, which would end the run right
+                // after the save; start the climb from the edge instead
+                player.y = Math.min(player.y, cameraY + CANVAS_HEIGHT);
                 spawnParticles('exhaust', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 12);
                 tryUnlock('jetpack_save');
+                // Panic, then relief: always, this is the moment it exists for
+                if (experimental) emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
             } else {
                 gameState = 'gameover';
                 stopAllLoops();
-                playSfx(isExperimental() ? 'fart' : 'fall');
+                playSfx(experimental ? 'fart' : 'fall');
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
             }
         }
@@ -1116,6 +1285,14 @@ export function createGame(canvas) {
         moveMovingPlatforms();
         updateGaze();
         updateParticles();
+        updateAccessories();
+        // Follows the setting live, so toggling it on the title screen shows at once
+        experimental = isExperimental();
+        if (experimental) {
+            if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) emotes.trigger('smile');
+            emotes.update();
+        }
+        updateCameo();
 
         // Platforms glide to their new spot when one has been given a drift
         for (const p of platforms) {
@@ -1190,6 +1367,73 @@ export function createGame(canvas) {
 
         // Missed somehow: start over with a fresh layout
         if (player.y > CANVAS_HEIGHT) enterDemo();
+    }
+
+    // ─── Title screen cameos ──────────────────────────────────────────────────
+    // A big Blunday slides in from a side, does one thing (eyes the Play button
+    // suspiciously, smiles, yawns, pokes its tongue out, or just blinks) and
+    // slides away again. Rare, and only while the menu itself is showing.
+    const CAMEOS = [
+        { emote: 'suspicious', hold: 210 },
+        { emote: 'smile',      hold: 150 },
+        { emote: 'sleepy',     hold: 200 },
+        { emote: 'tongue',     hold: 130 },
+        { emote: null,         hold: 150 },
+    ];
+
+    function updateCameo() {
+        if (!titleCameos || !experimental) {
+            cameo = null;
+            return;
+        }
+        if (!cameo) {
+            if (--cameoTimer > 0) return;
+            cameoTimer = randInt(...CAMEO_DELAY);
+            // Plain peeks and the suspicious squint are cameo-only; the rest
+            // follow the emotes equipped in the wardrobe
+            const options = CAMEOS.filter(c => !c.emote || c.emote === 'suspicious' || allowsReaction(look, c.emote));
+            const pick = options[randInt(0, options.length - 1)];
+            cameo = { side: Math.random() < 0.5 ? -1 : 1, y: randRange(565, 635), frame: 0, hold: pick.hold,
+                      emoteId: pick.emote, emote: null, blink: 0 };
+            return;
+        }
+        cameo.frame++;
+        if (cameo.emoteId && cameo.frame === CAMEO_SLIDE + 12) {
+            cameo.emote = { id: cameo.emoteId, age: 0, dur: cameo.hold - 24, variant: randInt(0, 1), intensity: 0.6, seed: Math.random() * 1000 };
+        }
+        if (cameo.emote && ++cameo.emote.age >= cameo.emote.dur) cameo.emote = null;
+        if (cameo.blink > 0) cameo.blink--;
+        else if (Math.random() < 0.012) cameo.blink = 7;
+        if (cameo.frame >= CAMEO_SLIDE * 2 + cameo.hold) cameo = null;
+    }
+
+    function drawCameo(now) {
+        const c = cameo;
+        const inT  = Math.min(c.frame / CAMEO_SLIDE, 1);
+        const outT = Math.min(Math.max((CAMEO_SLIDE * 2 + c.hold - c.frame) / CAMEO_SLIDE, 0), 1);
+        const t = Math.min(inT, outT);
+        const shown = t * t * (3 - 2 * t);
+        const w = BODY_W * CAMEO_SCALE;
+        const visible = (c.emoteId === 'suspicious' ? 0.5 : 0.62) * shown; // share of the body on screen
+        const left = c.side < 0 ? -w + visible * w : CANVAS_WIDTH - visible * w;
+
+        // Eyes on the Play button when suspicious, otherwise toward the middle
+        const eyeX = left + w / 2;
+        const eyeY = c.y + 15 * CAMEO_SCALE;
+        let g = { x: -c.side * 0.6, y: 0 };
+        if (c.emote?.id === 'suspicious') {
+            const dx = PLAY_BUTTON.x - eyeX;
+            const dy = PLAY_BUTTON.y - eyeY;
+            const len = Math.hypot(dx, dy) || 1;
+            g = { x: dx / len, y: dy / len };
+        }
+
+        ctx.save();
+        ctx.translate(left + w / 2, c.y + w); // pivot at the bottom middle
+        ctx.rotate(-c.side * 0.14 * shown);   // leaning in to peek
+        ctx.scale(CAMEO_SCALE, CAMEO_SCALE);
+        drawBlunday(ctx, -BODY_W / 2, -BODY_W, BODY_W, { look, gaze: g, emote: c.emote, blink: c.blink > 0, now, spin: propSpin, gum });
+        ctx.restore();
     }
 
     // ─── Drawing helpers ──────────────────────────────────────────────────────
@@ -1321,7 +1565,6 @@ export function createGame(canvas) {
         for (const [offset, color] of stops) grad.addColorStop(offset, color);
         return grad;
     }
-    const bgGrad = makeVerticalGradient(CANVAS_HEIGHT, [[0, '#1a0a3c'], [1, '#2a4a7a']]);
     const spaceBg = createSpaceBackground(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, RENDER_SCALE);
     const movingPlatformGrad    = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#6aacee'], [0.4, '#3a7ecc'], [1, '#1a4e9a']]);
     const breakablePlatformGrad = makeVerticalGradient(PLATFORM_HEIGHT, [[0, '#c07048'], [1, '#7a3a18']]);
@@ -1585,6 +1828,8 @@ export function createGame(canvas) {
                 ctx.fillStyle = `rgba(${r},${g},${b},${t * 0.8})`;
             } else if (part.kind === 'invert') {
                 ctx.fillStyle = `rgba(200,130,255,${t})`;
+            } else if (part.kind === 'gum') {
+                ctx.fillStyle = `rgba(255,140,200,${t})`;
             } else if (part.kind === 'bonk') {
                 ctx.fillStyle = `rgba(230,235,245,${t})`;
             } else if (part.kind === 'spark') {
@@ -1609,20 +1854,13 @@ export function createGame(canvas) {
     function draw(alpha, now = 0) {
         const camY = lerp(prevCameraY, cameraY, alpha);
 
-        // ── Background gradient ──
-        // Experimental: the sky changes with height (see background.js)
-        const spaceMode = experimental;
-        if (spaceMode) {
-            spaceBg.drawSky(-camY);
-        } else {
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        }
+        // ── Background: the sky changes with height (see background.js) ──
+        spaceBg.drawSky(-camY);
 
         ctx.save();
         if (shake > 0.2) ctx.translate(randRange(-shake, shake), randRange(-shake, shake));
 
-        const bubbleAlpha = spaceMode ? spaceBg.drawScenery(-camY, camY, now) : 1;
+        const bubbleAlpha = spaceBg.drawScenery(-camY, camY, now);
 
         // ── Parallax soft circles (stars/clouds) ──
         for (const c of bgCircles) {
@@ -1633,6 +1871,9 @@ export function createGame(canvas) {
             ctx.fillStyle = `rgba(255,255,255,${c.opacity * bubbleAlpha})`;
             ctx.fill();
         }
+
+        // Title screen cameo, behind the demo and the menu
+        if (gameState === 'idle' && cameo) drawCameo(now);
 
         // ── Platforms ──
         for (const platform of platforms) {
@@ -1747,20 +1988,7 @@ export function createGame(canvas) {
             drawHeldUmbrella(px + PLAYER_WIDTH / 2, drawY, 0.08 * Math.sin(now * 0.004));
         }
 
-        // Body gradient
-        const bodyGrad = ctx.createLinearGradient(px, drawY, px + PLAYER_WIDTH, drawY + drawH);
-        bodyGrad.addColorStop(0, '#66aaff');
-        bodyGrad.addColorStop(1, '#2255bb');
-        ctx.fillStyle = bodyGrad;
-        drawRoundRect(px, drawY, PLAYER_WIDTH, drawH, 6);
-        ctx.fill();
-        if (activeEffects.star) {
-            // Gold outline, pulsing with the aura
-            ctx.strokeStyle = `rgba(255,215,60,${0.6 + 0.4 * starPulse})`;
-            ctx.lineWidth   = 2.5;
-            ctx.stroke();
-        }
-
+        // Gear goes on first, so the cube and its accessories sit in front of it
         // Jetpack pack on player back (left side)
         if (activeEffects.jetpack) {
             ctx.fillStyle = '#cc4444';
@@ -1798,27 +2026,23 @@ export function createGame(canvas) {
             ctx.fillRect(px + PLAYER_WIDTH - 16, drawY + drawH, 14, 5);
         }
 
-        // Eyes
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(px + 8,  drawY + 10, 9, 9);
-        ctx.fillRect(px + 23, drawY + 10, 9, 9);
-        // Pupils (4px) can shift 2.5px either way from the center of each 9px eye
-        const pupilX = gaze.x * 2.5;
-        const pupilY = gaze.y * 2.5;
-        ctx.fillStyle = '#111';
-        ctx.fillRect(px + 10.5 + pupilX, drawY + 12.5 + pupilY, 4, 4);
-        ctx.fillRect(px + 25.5 + pupilX, drawY + 12.5 + pupilY, 4, 4);
+        // The cube itself, in the look picked on the Character screen. Emotes
+        // only show in Experimental Mode. A star adds a pulsing gold outline.
+        drawBlunday(ctx, px, drawY, drawH, {
+            look,
+            gaze,
+            emote:   experimental ? emotes.current : null,
+            blink:   experimental && emotes.blinking,
+            now,
+            spin:    propSpin,
+            gum,
+            outline: activeEffects.star ? `rgba(255,215,60,${0.6 + 0.4 * starPulse})` : null,
+        });
 
-        // Mouth (small curved line approximated by rect)
-        ctx.fillStyle = '#334';
-        ctx.fillRect(px + 13, drawY + 24, 14, 2);
-
-        // Feet/limbs (simple stubs)
-        ctx.fillStyle = '#2255bb';
-        ctx.fillRect(px + 4,              drawY + drawH - 2, 10, 6);
-        ctx.fillRect(px + PLAYER_WIDTH - 14, drawY + drawH - 2, 10, 6);
-
-        if (controlsInverted) drawInvertedIndicator(px + PLAYER_WIDTH / 2, drawY - (activeEffects.umbrella ? UMBRELLA_POLE + UMBRELLA_RADIUS : 0), now);
+        if (controlsInverted) {
+            const above = activeEffects.umbrella ? UMBRELLA_POLE + UMBRELLA_RADIUS : hatHeight(look);
+            drawInvertedIndicator(px + PLAYER_WIDTH / 2, drawY - above, now);
+        }
 
         // ── Particles ──
         drawParticles(camY, alpha, false);
@@ -1870,10 +2094,52 @@ export function createGame(canvas) {
     let lastTime = null;
     let accumulator = 0;
 
+    // ─── Frame rate monitor ───────────────────────────────────────────────────
+    // Some devices now and then show the whole game at a much lower frame rate.
+    // The game itself keeps its speed (the fixed timestep just runs more steps
+    // per frame), so this is the display or the browser delivering fewer frames:
+    // battery saving, thermal throttling, an OEM game mode capping the rate.
+    // Each time the measured rate settles somewhere new it's logged, with any
+    // long frames, so a slow spell shows up in chrome://inspect or Logcat (tag
+    // Capacitor/Console) next to MainActivity's display and power state.
+    const PERF_WINDOW_MS  = 2000;
+    const PERF_LONG_FRAME = 50;   // ms; a hitch rather than a lower rate
+    const PERF_CHANGE     = 0.15; // share of change in rate worth reporting
+    const perf = { start: null, frames: 0, long: 0, fps: 0, hitching: false };
+
+    function trackFrame(now, dt) {
+        // A paused loop (tab hidden, app in the background) isn't a slow frame
+        if (perf.start === null || dt > 1000) {
+            perf.start = now;
+            perf.frames = 0;
+            perf.long = 0;
+            return;
+        }
+        perf.frames++;
+        if (dt > PERF_LONG_FRAME) perf.long++;
+        const elapsed = now - perf.start;
+        if (elapsed < PERF_WINDOW_MS) return;
+        const fps = (perf.frames * 1000) / elapsed;
+        // Only changes: a new rate, or hitches starting after a smooth spell
+        const hitching = perf.long > 0;
+        const report = !perf.fps || Math.abs(fps - perf.fps) / perf.fps > PERF_CHANGE || (hitching && !perf.hitching);
+        perf.hitching = hitching;
+        if (report) {
+            console.info('[perf]', `${fps.toFixed(1)} fps`, perf.long ? `(${perf.long} frames over ${PERF_LONG_FRAME} ms)` : '',
+                         `in ${gameState}, rendering ${canvas.width}x${canvas.height}`);
+        }
+        perf.fps = fps;
+        perf.start = now;
+        perf.frames = 0;
+        perf.long = 0;
+    }
+
     function loop(now) {
         if (lastTime === null) lastTime = now;
-        accumulator += now - lastTime;
+        const dt = now - lastTime;
+        accumulator += dt;
         lastTime = now;
+        trackFrame(now, dt);
 
         let steps = 0;
         while (accumulator >= STEP_MS - STEP_TOLERANCE_MS && steps < MAX_STEPS_PER_FRAME) {
@@ -1918,6 +2184,7 @@ export function createGame(canvas) {
             rafId = null;
             lastTime = null;
             accumulator = 0;
+            perf.start = null;
         }
     }
 
@@ -1925,6 +2192,15 @@ export function createGame(canvas) {
         gameState = 'idle';
         reset(); // reset sets state, emits idle snapshot internally
         enterDemo();
+    }
+
+    // The title screen cameos only play while the menu itself is up (not under
+    // the Settings or Upgrades screens)
+    function setTitleCameos(on) {
+        if (on === titleCameos) return;
+        titleCameos = on;
+        cameo = null;
+        cameoTimer = randInt(...CAMEO_FIRST_DELAY);
     }
 
     // Rewarded ad watched at game over: bank this run's gold a second time (once)
@@ -1949,7 +2225,6 @@ export function createGame(canvas) {
             highScore,
             coins,
             activeEffects: effectsSnapshot(),
-            justUnlocked,
             gold,
             justSaved,
             runGold: runGoldEarned,
@@ -1973,9 +2248,11 @@ export function createGame(canvas) {
     bootsBounceVelocity       = BOOTS_BOUNCE_VELOCITY * getHigherJumpMultiplier();
     breakableExtraLandings    = getBreakableGripLevel();
     backupJetpackArmed        = hasBackupJetpack();
+    experimental              = isExperimental();
+    cameoTimer                = randInt(...CAMEO_FIRST_DELAY);
 
     // The title screen opens on the hopping demo (reset() replaces it when a run starts)
     enterDemo();
 
-    return { start, startLoop, stop, reset, toMenu, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot, claimRunGoldBonus };
+    return { start, startLoop, stop, reset, toMenu, setTitleCameos, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot, claimRunGoldBonus };
 }
