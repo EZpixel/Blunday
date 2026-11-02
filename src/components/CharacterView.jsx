@@ -39,6 +39,8 @@ export default function CharacterView({ onBack }) {
     const look = useLook();
     const [tab, setTab] = useState('color');
     const [info, setInfo] = useState(null); // what the last tapped tile says
+    // An emote just switched on, played by the big preview: { key, reactions }
+    const [showcase, setShowcase] = useState(null);
 
     const isEmotes = tab === 'emotes';
     const items = itemsForSlot(tab);
@@ -64,6 +66,7 @@ export default function CharacterView({ onBack }) {
             const on = !look.emotes.includes(item.id);
             toggleEmote(item.id);
             setInfo(describe(item, on));
+            if (on) setShowcase(prev => ({ key: (prev?.key ?? 0) + 1, reactions: item.reactions }));
             return;
         }
         equip(tab, item ? item.id : null);
@@ -80,7 +83,7 @@ export default function CharacterView({ onBack }) {
             <h1 className="fancy-heading character-heading">Character</h1>
 
             <div className="character-stage">
-                <BlundayPortrait look={look} size={150} animate className="character-preview" />
+                <BlundayPortrait look={look} size={150} animate showcase={showcase} className="character-preview" />
                 <div className="character-stage-side">
                     <p className="character-count"><strong>{countUnlocked()}</strong> / {TOTAL_ITEMS} unlocked</p>
                     <button className="character-randomize" onClick={() => { randomizeLook(); setInfo(null); }}>

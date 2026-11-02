@@ -1,11 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { drawBlunday, BODY_W } from '../game/blunday.js';
-import { isExperimental } from '../game/settings.js';
+import { drawBlunday, BODY_W, FACES } from '../game/blunday.js';
 
 // Blunday on a small canvas, for the Character screen and its button.
 // The view is a square of `view` logical units around the cube; the default
 // is roomy enough for the tallest hat and the widest hair.
 const OVERSAMPLE = 3;    // the UI layer is scaled up on big screens; stay sharp
+const EMOTE_FRAMES = 110; // how long the preview holds a mood
+
+function startEmote(id, intensity) {
+    const variants = FACES[id]?.length || 1;
+    return { id, age: 0, dur: EMOTE_FRAMES, variant: Math.floor(Math.random() * variants), intensity, seed: Math.random() * 1000 };
+}
 
 // The big preview cycles through the equipped emotes now and then
 function idleEmotes(look) {
@@ -14,12 +19,20 @@ function idleEmotes(look) {
 }
 
 // emote: an emote id to show frozen mid-reaction (static portraits only)
-export default function BlundayPortrait({ look, size = 64, view = 72, animate = false, emote = null, className = '' }) {
+// showcase: { key, reactions } plays those reactions right away, one after
+// another, whenever key changes (animated portraits only), e.g. an emote
+// that was just equipped
+export default function BlundayPortrait({ look, size = 64, view = 72, animate = false, emote = null, showcase = null, className = '' }) {
     const viewLeft = (view - BODY_W) / 2;
     const viewTop = view - BODY_W - 6; // feet at the bottom, the rest above for hats
     const canvasRef = useRef(null);
     const lookRef = useRef(look);
     lookRef.current = look;
+    // Reactions waiting to be shown, ahead of the idle moods
+    const showcaseRef = useRef([]);
+    useEffect(() => {
+        if (showcase) showcaseRef.current = [...showcase.reactions];
+    }, [showcase]); // a new object per request, so each one replays
 
     // Live preview: a gentle bounce, glances around, blinks and the odd mood
     useEffect(() => {
@@ -48,22 +61,23 @@ export default function BlundayPortrait({ look, size = 64, view = 72, animate = 
             const bounce = Math.sin(now * 0.004);
             const h = BODY_W * (1 + bounce * 0.04);
             const gaze = { x: Math.sin(now * 0.0011) * 0.8, y: Math.sin(now * 0.0007) * 0.3 };
-            const feelings = isExperimental();
-            if (feelings) {
+            const queued = showcaseRef.current;
+            if (queued.length && !emote?.showcase) {
+                // A requested reaction cuts in over any idle mood
+                emote = { ...startEmote(queued.shift(), 0.9), showcase: true };
+                blinkLeft = 0;
+            } else {
                 if (emote) {
                     if (++emote.age >= emote.dur) {
-                        emote = null;
+                        emote = queued.length ? { ...startEmote(queued.shift(), 0.9), showcase: true } : null;
                         nextEmote = frame + 200 + Math.random() * 300;
                     }
                 } else if (frame >= nextEmote) {
                     const options = idleEmotes(lookRef.current);
-                    const id = options[Math.floor(Math.random() * options.length)];
-                    emote = { id, age: 0, dur: 110, variant: Math.floor(Math.random() * 2), intensity: 0.6, seed: Math.random() * 1000 };
+                    emote = startEmote(options[Math.floor(Math.random() * options.length)], 0.6);
                 }
                 if (blinkLeft > 0) blinkLeft--;
                 else if (Math.random() < 0.01) blinkLeft = 7;
-            } else {
-                emote = null;
             }
             paint(now, h, emote, blinkLeft > 0, gaze, spin);
             raf = requestAnimationFrame(tick);

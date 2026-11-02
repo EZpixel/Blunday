@@ -4,6 +4,8 @@ import { getSettings, updateSettings, subscribeSettings } from '../game/settings
 import BackButton from './BackButton.jsx';
 import MenuEmblem from './MenuEmblem.jsx';
 import { needsPrivacyOptions, showPrivacyOptions } from '../game/ads.js';
+import { playGamesSupported, isSignedIn, subscribeSignIn, showPlayAchievements } from '../game/playGames.js';
+import { signInAndSync } from '../game/cloudSave.js';
 
 function SpeakerIcon({ muted }) {
     return (
@@ -57,6 +59,8 @@ export default function SettingsView({ onBack, onCredits }) {
     const [confirming, setConfirming] = useState(false);
     const [settings, setSettings] = useState(getSettings);
     useEffect(() => subscribeSettings(setSettings), []);
+    const [signedIn, setSignedIn] = useState(isSignedIn);
+    useEffect(() => subscribeSignIn(setSignedIn), []);
 
     return (
         <div className="overlay list-overlay settings-overlay">
@@ -76,7 +80,7 @@ export default function SettingsView({ onBack, onCredits }) {
                 <div className="settings-switch-row">
                     <div>
                         <strong>Experimental Mode</strong>
-                        <span>Brand new features first, like Blunday's feelings and wardrobe. Things may get weird.</span>
+                        <span>Brand new features first. Right now: a rather rude sound when Blunday falls. Things may get weird.</span>
                     </div>
                     <button
                         className="settings-switch"
@@ -99,6 +103,10 @@ export default function SettingsView({ onBack, onCredits }) {
 
                 <section className="settings-section">
                     <h2>Progress</h2>
+                    {/* Signed in, progress is backed up to the player's Google account */}
+                    {playGamesSupported && (signedIn
+                        ? <button className="emblem-button" onClick={showPlayAchievements}><MenuEmblem icon="trophy" />Play Games</button>
+                        : <button onClick={signInAndSync}>Connect Play Games</button>)}
                     {confirming ? (
                         <>
                             <p className="settings-warning">This will permanently delete your progress. Are you sure?</p>

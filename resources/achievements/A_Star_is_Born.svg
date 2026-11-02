@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "A Star is Born". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#9a6ae0"/><stop offset="1" stop-color="#2a1460"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M210 40H302L410 440H102Z" fill="#fff6c0" opacity="0.28"/><ellipse cx="256" cy="396" rx="140" ry="30" fill="#fff6c0" opacity="0.4"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M296 240L352 176" stroke="#0d1640" stroke-width="44" stroke-linecap="round"/><path d="M296 240L352 176" stroke="#2255bb" stroke-width="24" stroke-linecap="round"/><g transform="translate(250 290) rotate(-8) scale(3.9) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-blue)" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><path d="M9 14.5Q12.5 18 16 14.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 14.5Q27.5 18 31 14.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 6Q12.5 2.5 17 5.5" fill="none" stroke="#334" stroke-width="2" stroke-linecap="round"/><path d="M23 5.5Q27.5 2.5 32 6" fill="none" stroke="#334" stroke-width="2" stroke-linecap="round"/><path d="M13 23L27 23A7 7 0 0 1 13 23Z" fill="#334"/><ellipse cx="20" cy="27" rx="3.6" ry="1.8" fill="#ff7a8a"/><path d="M-2 0L3.5 0L2.5 18L-4 23Z M42 0L36.5 0L37.5 18L44 23Z" fill="#7a4520" stroke="#0d1640" stroke-width="1.2820512820512822" stroke-linejoin="round"/><path d="M1 3.5V0.5Q1 -3 6 -3.5H34Q39 -3 39 0.5V3.5Q30 1.5 20 4Q10 1.5 1 3.5Z" fill="#7a4520" stroke="#0d1640" stroke-width="1.2820512820512822" stroke-linejoin="round"/></g><polygon points="370.37,136.44 373.78,150.86 387.86,155.49 375.19,163.19 375.14,178.01 363.9,168.35 349.79,172.87 355.51,159.2 346.84,147.18 361.61,148.39" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="120,104 127.34,119.9 144.73,121.97 131.87,133.86 135.28,151.03 120,142.48 104.72,151.03 108.13,133.86 95.27,121.97 112.66,119.9" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="174.73,70.71 176.15,81.4 186,85.77 176.28,90.43 175.16,101.15 167.73,93.34 157.19,95.59 162.32,86.11 156.92,76.78 167.52,78.73" fill="#fff6b0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="403.29,73.49 401.04,86.78 411.19,95.64 397.86,97.6 392.57,109.99 386.58,97.92 373.16,96.72 382.79,87.29 379.79,74.16 391.73,80.4" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="138.53,240.05 133.67,249.67 139.33,258.85 128.68,257.2 121.71,265.41 119.98,254.77 110.01,250.68 119.6,245.75 120.41,235.01 128.06,242.6" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="426.37,241.3 415.14,252.93 419.18,268.59 404.65,261.5 391.01,270.18 393.26,254.17 380.79,243.89 396.71,241.08 402.64,226.04 410.23,240.31" fill="#fff6b0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="341.97,99.15 334.89,103.05 334.51,111.12 328.61,105.59 320.82,107.72 324.25,100.41 319.82,93.65 327.84,94.66 332.89,88.35 334.41,96.29" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="163.63,343.18 154.4,345.08 151.19,353.95 146.53,345.75 137.1,345.44 143.46,338.47 140.84,329.41 149.43,333.3 157.24,328.02 156.19,337.39" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><polygon points="388.08,357.07 378.7,356.15 373.01,363.68 370.98,354.47 362.07,351.39 370.2,346.61 370.38,337.18 377.43,343.43 386.46,340.69 382.69,349.34" fill="#fff6b0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+</svg>

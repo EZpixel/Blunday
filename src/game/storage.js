@@ -1,4 +1,7 @@
-export function clearSaveData() {
+import { clearCloudSave } from './cloudSave.js';
+
+export async function clearSaveData() {
+    await clearCloudSave();
     try {
         localStorage.removeItem('blundayHighScore');
         localStorage.removeItem('blundayGold');

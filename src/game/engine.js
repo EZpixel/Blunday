@@ -94,7 +94,7 @@ const LANDING_EFFECT_SOUNDS = ['boots'];
 // Parallax background circles
 const BG_CIRCLE_COUNT = 18;
 
-// Emote triggers (Experimental Mode). Each only gives a chance of a reaction;
+// Emote triggers. Each only gives a chance of a reaction;
 // see emotes.js for the pacing.
 const CLOSE_CALL_LINE   = 0.85;  // landing this far down the screen is a close call
 const PANIC_LINE        = 0.72;  // falling past this far down the screen is scary
@@ -108,7 +108,7 @@ const RICHES_GOLD       = 300;
 const CALM_EMOTE_CHANCE = 1 / 700; // per step, while nothing else is going on
 const GUM_INFLATE       = 1 / 240; // bubble gum grows to full size in 4 s, then pops
 
-// Title screen cameos (Experimental Mode): now and then a big Blunday peeks
+// Title screen cameos: now and then a big Blunday peeks
 // in from a side, behind the menu
 const CAMEO_FIRST_DELAY = [480, 900];
 const CAMEO_DELAY       = [1200, 2700];
@@ -159,7 +159,7 @@ export function createGame(canvas) {
     let runGoldEarned = 0;         // gold banked this run, for the rewarded "2x gold" ad
     let runBonusClaimed = false;
     let runUsedPowerUp = false;
-    let experimental = false;      // Experimental Mode (fart sound, emotes), latched per run
+    let experimental = false;      // Experimental Mode (the fart sound), latched per run
     let controlsInverted = false;  // set by landing on an invert platform
     let flyingGold = [];           // gold pulled off its platform by the magnet: { type, amount, x, y, ox, oy, speed }
     let moveSpeedMultiplier = 1;
@@ -587,7 +587,7 @@ export function createGame(canvas) {
         else if (g.type === 'bar') tryUnlock('gold_bar');
         else if (g.type === 'gem') tryUnlock('red_gem');
         checkRich();
-        if (experimental) reactToGold(g.type, gain);
+        reactToGold(g.type, gain);
     }
 
     // Gems make the jaw drop (purple ones the most); a pile of riches in a short
@@ -797,7 +797,6 @@ export function createGame(canvas) {
         const closeCall = player.y + PLAYER_HEIGHT - cameraY > CANVAS_HEIGHT * CLOSE_CALL_LINE;
         lastLandY = platform.y;
         airDx = 0;
-        if (!experimental) return;
 
         if (justInverted) emotes.trigger('dizzy', { chance: 0.7 });
         else if (platform.broken) emotes.trigger('annoyed', { chance: 0.25 });
@@ -975,7 +974,7 @@ export function createGame(canvas) {
                     activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
                     tryUnlock('jetpack');
-                    if (experimental) emotes.trigger('thrust', { chance: 0.6 });
+                    emotes.trigger('thrust', { chance: 0.6 });
                 } else if (p.powerUp.type === 'boots') {
                     activeEffects.boots = { type: 'boots', remaining: BOOTS_DURATION_FRAMES, total: BOOTS_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
@@ -1141,7 +1140,7 @@ export function createGame(canvas) {
 
         updateParticles();
         updateAccessories();
-        if (experimental) updateEmotes();
+        updateEmotes();
 
         // Game over / jetpack save
         if (player.y - cameraY > CANVAS_HEIGHT) {
@@ -1160,7 +1159,7 @@ export function createGame(canvas) {
                 spawnParticles('exhaust', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 12);
                 tryUnlock('jetpack_save');
                 // Panic, then relief: always, this is the moment it exists for
-                if (experimental) emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
+                emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
             } else {
                 gameState = 'gameover';
                 stopAllLoops();
@@ -1286,12 +1285,8 @@ export function createGame(canvas) {
         updateGaze();
         updateParticles();
         updateAccessories();
-        // Follows the setting live, so toggling it on the title screen shows at once
-        experimental = isExperimental();
-        if (experimental) {
-            if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) emotes.trigger('smile');
-            emotes.update();
-        }
+        if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) emotes.trigger('smile');
+        emotes.update();
         updateCameo();
 
         // Platforms glide to their new spot when one has been given a drift
@@ -1382,7 +1377,7 @@ export function createGame(canvas) {
     ];
 
     function updateCameo() {
-        if (!titleCameos || !experimental) {
+        if (!titleCameos) {
             cameo = null;
             return;
         }
@@ -2026,13 +2021,13 @@ export function createGame(canvas) {
             ctx.fillRect(px + PLAYER_WIDTH - 16, drawY + drawH, 14, 5);
         }
 
-        // The cube itself, in the look picked on the Character screen. Emotes
-        // only show in Experimental Mode. A star adds a pulsing gold outline.
+        // The cube itself, in the look picked on the Character screen. A star
+        // adds a pulsing gold outline.
         drawBlunday(ctx, px, drawY, drawH, {
             look,
             gaze,
-            emote:   experimental ? emotes.current : null,
-            blink:   experimental && emotes.blinking,
+            emote:   emotes.current,
+            blink:   emotes.blinking,
             now,
             spin:    propSpin,
             gum,

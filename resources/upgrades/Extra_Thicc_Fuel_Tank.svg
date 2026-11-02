@@ -1,0 +1,26 @@
+<!-- Blunday upgrade icon: "Extra Thicc Fuel Tank". 512x512, same badge as the achievement icons
+     (resources/achievements): night-sky ground, ink (#0d1640) ringed disc lit from the
+     top left; everything that matters stays inside the disc. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#7ee0c8"/><stop offset="1" stop-color="#0f5e58"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 256L556 256L548.54 322.46ZM256 256L515.81 406L476.12 459.83ZM256 256L406 515.81L344.71 542.58ZM256 256L256 556L189.54 548.54ZM256 256L106 515.81L52.17 476.12ZM256 256L-3.81 406L-30.58 344.71ZM256 256L-44 256L-36.54 189.54ZM256 256L-3.81 106L35.88 52.17ZM256 256L106 -3.81L167.29 -30.58ZM256 256L256 -44L322.46 -36.54ZM256 256L406 -3.81L459.83 35.88ZM256 256L515.81 106L542.58 167.29Z" fill="#fff" opacity="0.14"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M300 132H346Q360 132 360 146V172H300Z" fill="#a82222" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><rect x="132" y="150" width="248" height="250" rx="70" fill="#d23a3a" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M176 150Q170 112 214 112H276Q304 112 300 150" fill="none" stroke="#0d1640" stroke-width="26" stroke-linecap="round"/><path d="M176 150Q170 112 214 112H276Q304 112 300 150" fill="none" stroke="#a82222" stroke-width="14" stroke-linecap="round"/><path d="M164 200Q158 260 172 320" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="14" stroke-linecap="round"/><circle cx="256" cy="290" r="66" fill="#f4f4ec" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M206 300A52 52 0 0 1 228 250" fill="none" stroke="#e0283a" stroke-width="12"/><path d="M232 247A52 52 0 0 1 280 247" fill="none" stroke="#ffd23a" stroke-width="12"/><path d="M284 250A52 52 0 0 1 306 300" fill="none" stroke="#3ca03c" stroke-width="12"/><path d="M256 300L302 266" stroke="#0d1640" stroke-width="8" stroke-linecap="round"/><circle cx="256" cy="300" r="9" fill="#0d1640"/><path d="M380 238C380 238 410 272 410 292A30 30 0 0 1 350 292C350 272 380 238 380 238Z" fill="#ffd24a" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><g fill="#fff"><path d="M150 106Q150 120 164 120Q150 120 150 134Q150 120 136 120Q150 120 150 106Z" fill="#fff"/><path d="M398 158Q398 168 408 168Q398 168 398 178Q398 168 388 168Q398 168 398 158Z" fill="#fff"/></g>
+  </g>
+</svg>

@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "Bag Secured, No Cap". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#8ff0d2"/><stop offset="1" stop-color="#1f8a6e"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 256L556 256L545.78 333.65ZM256 256L515.81 406L468.13 468.13ZM256 256L406 515.81L333.65 545.78ZM256 256L256 556L178.35 545.78ZM256 256L106 515.81L43.87 468.13ZM256 256L-3.81 406L-33.78 333.65ZM256 256L-44 256L-33.78 178.35ZM256 256L-3.81 106L43.87 43.87ZM256 256L106 -3.81L178.35 -33.78ZM256 256L256 -44L333.65 -33.78ZM256 256L406 -3.81L468.13 43.87ZM256 256L515.81 106L545.78 178.35Z" fill="#fff" opacity="0.12"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(256 236) rotate(0) scale(4.1) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-blue)" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><path d="M9 16.5L12.5 12L16 16.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 16.5L27.5 12L31 16.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 24.1A6.5 6.5 0 0 1 15 24.1" fill="none" stroke="#334" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6.5" cy="22" rx="3.2" ry="1.8" fill="#ff6e8c" opacity="0.6"/><ellipse cx="33.5" cy="22" rx="3.2" ry="1.8" fill="#ff6e8c" opacity="0.6"/><path d="M4 3A16 16 0 0 1 36 3Z" fill="#e03838" stroke="#0d1640" stroke-width="1.2195121951219514" stroke-linejoin="round"/><path d="M10 -6Q20 -12 30 -6" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><ellipse cx="0" cy="3" rx="10" ry="2.6" fill="#b02020" stroke="#0d1640" stroke-width="1.2195121951219514"/><circle cx="20" cy="-12.5" r="1.8" fill="#fff" stroke="#0d1640" stroke-width="0.6097560975609757"/><rect x="25" y="-1" width="6" height="3" fill="#000" opacity="0.25"/></g><path d="M196 318Q160 380 190 418Q256 446 322 418Q352 380 316 318Z" fill="#c8961a" stroke="#0d1640" stroke-width="10" stroke-linejoin="round"/><path d="M206 300H306L290 324H222Z" fill="#8b6914" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M214 300Q256 284 298 300" fill="none" stroke="#ffd700" stroke-width="7" stroke-linecap="round"/><path d="M206 352Q214 336 230 334" fill="none" stroke="#ffe680" stroke-width="7" stroke-linecap="round" opacity="0.7"/><circle cx="256" cy="380" r="26" fill="#ffd21f" stroke="#0d1640" stroke-width="5"/><circle cx="256" cy="380" r="16.12" fill="none" stroke="#c08a10" stroke-width="4.16"/><circle cx="246.9" cy="370.12" r="5.2" fill="#fff" opacity="0.7"/><path d="M172 330L214 378" stroke="#0d1640" stroke-width="46" stroke-linecap="round"/><path d="M172 330L214 378" stroke="#2255bb" stroke-width="26" stroke-linecap="round"/><path d="M340 330L298 378" stroke="#0d1640" stroke-width="46" stroke-linecap="round"/><path d="M340 330L298 378" stroke="#2255bb" stroke-width="26" stroke-linecap="round"/><path d="M132 178C100 158 120 135 132 152C144 135 164 158 132 178Z" fill="#ff3d6e" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M384 143.5C360 128.5 375 111.25 384 124C393 111.25 408 128.5 384 143.5Z" fill="#ff3d6e" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M398 219.9C380.4 208.9 391.4 196.25 398 205.6C404.6 196.25 415.6 208.9 398 219.9Z" fill="#ff3d6e" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+</svg>

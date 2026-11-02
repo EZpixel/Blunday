@@ -1,0 +1,26 @@
+<!-- Blunday upgrade icon: "Sticky Toe Beans". 512x512, same badge as the achievement icons
+     (resources/achievements): night-sky ground, ink (#0d1640) ringed disc lit from the
+     top left; everything that matters stays inside the disc. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#9ee07a"/><stop offset="1" stop-color="#2a6a2a"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 256L556 256L548.54 322.46ZM256 256L515.81 406L476.12 459.83ZM256 256L406 515.81L344.71 542.58ZM256 256L256 556L189.54 548.54ZM256 256L106 515.81L52.17 476.12ZM256 256L-3.81 406L-30.58 344.71ZM256 256L-44 256L-36.54 189.54ZM256 256L-3.81 106L35.88 52.17ZM256 256L106 -3.81L167.29 -30.58ZM256 256L256 -44L322.46 -36.54ZM256 256L406 -3.81L459.83 35.88ZM256 256L515.81 106L542.58 167.29Z" fill="#fff" opacity="0.14"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M104 330H246L256 344L246 356L256 372H104Z" fill="#b06840" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M408 330H266L256 344L266 356L256 372H408Z" fill="#b06840" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M122 350H220M290 350H390" stroke="#6a3214" stroke-width="5" stroke-linecap="round"/><path d="M226 326Q256 314 286 326V376Q276 400 270 380Q262 404 252 380Q240 398 226 376Z" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><rect x="166" y="128" width="180" height="170" rx="54" fill="url(#body-blue)" stroke="#0d1640" stroke-width="8" stroke-linejoin="round"/><ellipse cx="256" cy="236" rx="48" ry="40" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><ellipse cx="196" cy="172" rx="20" ry="22" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><ellipse cx="240" cy="156" rx="20" ry="22" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><ellipse cx="286" cy="160" rx="20" ry="22" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><ellipse cx="322" cy="186" rx="20" ry="22" fill="#ff8ac0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><ellipse cx="242" cy="222" rx="14" ry="8" fill="#fff" opacity="0.5"/><g fill="#fff"><path d="M390 126Q390 140 404 140Q390 140 390 154Q390 140 376 140Q390 140 390 126Z" fill="#fff"/><path d="M120 189Q120 200 131 200Q120 200 120 211Q120 200 109 200Q120 200 120 189Z" fill="#fff"/></g>
+  </g>
+</svg>
