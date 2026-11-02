@@ -44,10 +44,14 @@ public class PlayGamesPlugin extends Plugin {
         resolveAuth(call, PlayGames.getGamesSignInClient(getActivity()).signIn());
     }
 
+    // Resolves { authenticated, error? }. The error (Play's exception, e.g. an
+    // ApiException status code) is only there to be logged, so a failed sign-in
+    // says why instead of just "not signed in".
     private void resolveAuth(PluginCall call, Task<AuthenticationResult> task) {
         task.addOnCompleteListener(t -> {
             JSObject result = new JSObject();
             result.put("authenticated", t.isSuccessful() && t.getResult().isAuthenticated());
+            if (t.getException() != null) result.put("error", t.getException().toString());
             call.resolve(result);
         });
     }

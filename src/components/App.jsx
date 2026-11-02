@@ -22,6 +22,9 @@ import { initAds, shouldOfferDouble, showRewardedAd } from '../game/ads.js';
 import { subscribeUnlocks } from '../game/achievements.js';
 import { rewardForAchievement } from '../game/wardrobe.js';
 import { requestSync } from '../game/cloudSave.js';
+import { shouldShowPlayGamesPrompt } from '../game/playGamesPrompt.js';
+import { subscribeNotifications } from '../game/notify.js';
+import PlayGamesPrompt from './PlayGamesPrompt.jsx';
 
 const MOVE_HINT_MS = 10000;
 
@@ -64,7 +67,7 @@ export default function App() {
     });
 
     const [view, setView] = useState('menu');
-    // Queued notifications: { key, kind: 'achievement' | 'save', id, title, reward }
+    // Queued notifications: { key, kind: 'achievement' | 'save' | 'message', id, title, reward, text }
     const [toasts, setToasts] = useState([]);
     // Rewarded "2x gold" offer for the current game over: null, or
     // { state: 'offer' | 'watching' | 'done' | 'failed', amount }
@@ -260,6 +263,20 @@ export default function App() {
         };
     }, []); // empty deps: run once per mount
 
+    // ── Play Games prompt — once, on the title screen, for players not signed in
+    // Only opens over the bare title screen: if a run or another screen has
+    // started by the time the sign-in check answers, it waits for the next launch.
+    useEffect(() => {
+        let cancelled = false;
+        shouldShowPlayGamesPrompt().then(show => {
+            if (!show || cancelled) return;
+            if (engineRef.current?.getSnapshot().gameState !== 'idle' || viewRef.current !== 'menu') return;
+            setView('playGames');
+            viewRef.current = 'playGames';
+        });
+        return () => { cancelled = true; };
+    }, []);
+
     // ── Notifications — achievements (from anywhere) and the jetpack save ─────
     // Unlocks that land together are queued and shown one after another, each
     // with its own sound, and mention the wardrobe item they unlock
@@ -271,6 +288,9 @@ export default function App() {
         const reward = rewardForAchievement(def.id)?.name;
         queueToast({ kind: 'achievement', id: def.id, title: def.title, reward });
     }), []);
+
+    // Plain messages from other screens (see notify.js)
+    useEffect(() => subscribeNotifications(text => queueToast({ kind: 'message', text })), []);
 
     const toast = toasts[0] || null;
     useEffect(() => {
@@ -347,7 +367,9 @@ export default function App() {
                 <MoveHint visible={gameState === 'running' && moveHintRun !== null} />
                 {gameState === 'idle' && (
                     sharedView ?? (
-                        view === 'achievements'
+                        view === 'playGames'
+                            ? <PlayGamesPrompt onDone={() => setView('menu')} />
+                            : view === 'achievements'
                             ? <AchievementsView onBack={() => setView('menu')} />
                             : view === 'upgrades'
                                 ? <UpgradesView onBack={() => setView('menu')} />
@@ -370,6 +392,8 @@ export default function App() {
                     <div className={'toast' + (toast.kind === 'achievement' ? ' toast-achievement' : '')} key={toast.key}>
                         {toast.kind === 'save'
                             ? 'Saved by your Ctrl+Z Jetpack!'
+                            : toast.kind === 'message'
+                            ? toast.text
                             : <>
                                 <BadgeArt src={achievementArt(toast.id)} size={40} />
                                 <div className="toast-text">

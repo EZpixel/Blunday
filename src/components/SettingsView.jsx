@@ -6,6 +6,8 @@ import MenuEmblem from './MenuEmblem.jsx';
 import { needsPrivacyOptions, showPrivacyOptions } from '../game/ads.js';
 import { playGamesSupported, isSignedIn, subscribeSignIn, showPlayAchievements } from '../game/playGames.js';
 import { signInAndSync } from '../game/cloudSave.js';
+import PlayGamesLogo from './PlayGamesLogo.jsx';
+import { notify } from '../game/notify.js';
 
 function SpeakerIcon({ muted }) {
     return (
@@ -60,6 +62,17 @@ export default function SettingsView({ onBack, onCredits }) {
     const [settings, setSettings] = useState(getSettings);
     useEffect(() => subscribeSettings(setSettings), []);
     const [signedIn, setSignedIn] = useState(isSignedIn);
+    // Connect Play Games: 'idle' | 'connecting'
+    const [connect, setConnect] = useState('idle');
+
+    async function handleConnect() {
+        setConnect('connecting');
+        // On success the button turns into "Play Games" (and the game may reload
+        // to bring in cloud progress); on failure a notification says so
+        const ok = await signInAndSync();
+        setConnect('idle');
+        if (!ok) notify("Couldn't connect to Play Games. Please try again later.");
+    }
     useEffect(() => subscribeSignIn(setSignedIn), []);
 
     return (
@@ -96,32 +109,53 @@ export default function SettingsView({ onBack, onCredits }) {
 
             <div className="settings-footer">
                 <section className="settings-section">
-                    <h2>About</h2>
-                    <button className="emblem-button" onClick={onCredits}><MenuEmblem icon="heart" />Credits</button>
-                    {needsPrivacyOptions() && <button onClick={showPrivacyOptions}>Ad Privacy Options</button>}
-                </section>
-
-                <section className="settings-section">
                     <h2>Progress</h2>
                     {/* Signed in, progress is backed up to the player's Google account */}
                     {playGamesSupported && (signedIn
                         ? <button className="emblem-button" onClick={showPlayAchievements}><MenuEmblem icon="trophy" />Play Games</button>
-                        : <button onClick={signInAndSync}>Connect Play Games</button>)}
-                    {confirming ? (
-                        <>
-                            <p className="settings-warning">This will permanently delete your progress. Are you sure?</p>
-                            <div className="settings-confirm-row">
-                                <button onClick={clearSaveData}>Confirm Reset</button>
-                                <button onClick={() => setConfirming(false)}>Cancel</button>
-                            </div>
-                        </>
-                    ) : (
-                        <button onClick={() => setConfirming(true)}>Reset Progress</button>
-                    )}
+                        : <button className="emblem-button play-games-connect" onClick={handleConnect} disabled={connect === 'connecting'}>
+                            <PlayGamesLogo />{connect === 'connecting' ? 'Connecting...' : 'Connect Play Games'}
+                        </button>)}
+                    <button onClick={() => setConfirming(true)}>Reset Progress</button>
+                </section>
+
+                <section className="settings-section">
+                    <h2>About</h2>
+                    <button className="emblem-button" onClick={onCredits}><MenuEmblem icon="heart" />Credits</button>
+                    {needsPrivacyOptions() && <button onClick={showPrivacyOptions}>Ad Privacy Options</button>}
                 </section>
             </div>
 
             <BackButton onClick={onBack} />
+
+            {confirming && <ResetConfirmDialog onCancel={() => setConfirming(false)} />}
+        </div>
+    );
+}
+
+// Popup over the whole Settings screen, asking before Reset Progress wipes
+// everything. Tapping outside the panel cancels, like the Cancel button.
+function ResetConfirmDialog({ onCancel }) {
+    const [resetting, setResetting] = useState(false);
+
+    function handleConfirm() {
+        setResetting(true);
+        clearSaveData(); // clears the cloud copy too, then reloads the game
+    }
+
+    return (
+        <div className="confirm-backdrop" onClick={e => { if (e.target === e.currentTarget && !resetting) onCancel(); }}>
+            <div className="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-confirm-text">
+                <p id="reset-confirm-text" className="settings-warning">
+                    This will permanently delete your progress. Are you sure?
+                </p>
+                <div className="settings-confirm-row">
+                    <button onClick={handleConfirm} disabled={resetting}>
+                        {resetting ? 'Resetting...' : 'Confirm Reset'}
+                    </button>
+                    <button className="grey-button" onClick={onCancel} disabled={resetting}>Cancel</button>
+                </div>
+            </div>
         </div>
     );
 }

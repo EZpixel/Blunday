@@ -51,15 +51,34 @@ export function subscribeSignIn(fn) {
     return () => subscribers.delete(fn);
 }
 
+// Resolves once the launch sign-in check has an answer (signed in or not), so
+// the game can tell "not signed in" apart from "hasn't finished checking yet".
+// Resolves right away where Play Games isn't available.
+let markSignInChecked;
+const signInChecked = playGamesSupported
+    ? new Promise(resolve => { markSignInChecked = resolve; })
+    : Promise.resolve();
+
+export function whenSignInChecked() {
+    return signInChecked;
+}
+
 // Play signs the player in on its own at launch; this picks up the result
+// Play's answer to a sign-in check or attempt, with the reason logged when it's a no
+function authResult({ authenticated, error }, what) {
+    if (!authenticated) log(`${what}: not signed in`, error ? `(${error})` : '(no error from Play; the player may have closed the sign-in)');
+    return authenticated;
+}
+
 export async function checkSignIn() {
     if (!playGamesSupported) return false;
     try {
-        setSignedIn((await PlayGames.isAuthenticated()).authenticated);
+        setSignedIn(authResult(await PlayGames.isAuthenticated(), 'sign-in check'));
     } catch (e) {
         log('sign-in check failed:', e?.message ?? e);
         setSignedIn(false);
     }
+    markSignInChecked();
     return signedIn;
 }
 
@@ -67,7 +86,7 @@ export async function checkSignIn() {
 export async function signIn() {
     if (!playGamesSupported) return false;
     try {
-        setSignedIn((await PlayGames.signIn()).authenticated);
+        setSignedIn(authResult(await PlayGames.signIn(), 'sign-in'));
     } catch (e) {
         log('sign-in failed:', e?.message ?? e);
     }

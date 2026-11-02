@@ -1171,7 +1171,7 @@ body {
 
 .overlay .settings-section > button {
     margin-top: 0;
-    width: 260px;
+    width: 290px;
     padding: 13px 20px;
     font-size: 20px;
 }
@@ -1189,6 +1189,40 @@ body {
 
 .list-overlay .settings-warning {
     font-size: 16px;
+    text-align: center;
+}
+
+/* ── Confirmation popup (Reset Progress) ─────────────────────────────────── */
+/* Dims the screen it opens over; the panel sits in the middle */
+.confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.confirm-dialog {
+    width: 340px;
+    max-width: 100%;
+    padding: 22px 20px 24px;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    background: #1d2450;
+    box-shadow: 0 6px 0 var(--ink), 0 10px 24px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+}
+
+.overlay .confirm-dialog .settings-warning {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.4;
     text-align: center;
 }
 
@@ -1272,6 +1306,79 @@ body {
     transform: scale(1.12);
 }
 
+/* Google Play Games' own icon (PlayGamesLogo.jsx): shown as is, never recolored,
+   in the emblem's spot on a button */
+.play-games-logo {
+    flex: none;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.overlay .emblem-button .play-games-logo {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ── Play Games prompt (first launch, Android) ───────────────────────────── */
+/* Three equal-height rows like the title screen: heading and text at the
+   bottom of the first, Connect alone in the middle (the vertical center of
+   the screen), Not Now at the top of the last */
+.play-games-prompt {
+    display: grid;
+    grid-template-rows: 1fr auto 1fr;
+    justify-items: center;
+    gap: 24px;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 30;
+}
+
+.overlay.play-games-prompt p {
+    max-width: 340px;
+    font-size: 20px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.play-games-prompt-footer {
+    align-self: start;
+}
+
+/* Connect: sized like the title screen's menu buttons, a little wider so the
+   label fits on one line. The left padding keeps the label clear of the logo
+   pinned at the left edge (14px in, 34px wide), with a small gap after it. */
+.overlay.play-games-prompt > button.play-games-connect {
+    margin-top: 0;
+    width: 330px;
+    padding: 16px 20px 16px 60px;
+    font-size: 22px;
+    white-space: nowrap;
+}
+
+/* Not Now: a step smaller, so Connect stays the main choice */
+.overlay .play-games-prompt-footer button {
+    margin-top: 0;
+    width: 220px;
+    padding: 12px 24px;
+    font-size: 19px;
+}
+
+/* Grey secondary button (Not Now): same shape and 3D edge as the blue ones,
+   lighter than the disabled grey so it still reads as tappable */
+.overlay button.grey-button:not(:disabled) {
+    background: linear-gradient(#9ca1b0, #747988);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 4px 0 -1px #45485a, 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.overlay button.grey-button:hover:not(:disabled) {
+    background: linear-gradient(#b3b8c6, #8a8f9e);
+}
+
+.overlay button.grey-button:active:not(:disabled) {
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 2px 0 -1px #45485a, 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
 /* Smaller emblem for the compact buttons on the settings screen */
 .settings-section .emblem-button {
     min-height: 56px;
@@ -1286,6 +1393,14 @@ body {
 .settings-section .emblem-button .menu-emblem svg {
     width: 24px;
     height: 24px;
+}
+
+/* Connect Play Games: the label starts after the logo (14px in, 28px wide)
+   with a small gap, instead of centering under it, and stays on one line */
+.overlay .settings-section > button.play-games-connect {
+    padding-left: 50px;
+    padding-right: 12px;
+    white-space: nowrap;
 }
 
 /* ── Character screen ────────────────────────────────────────────────────── */
