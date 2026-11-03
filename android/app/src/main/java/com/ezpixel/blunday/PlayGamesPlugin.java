@@ -1,9 +1,11 @@
 package com.ezpixel.blunday;
 
+import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.google.android.gms.games.AuthenticationResult;
 import com.google.android.gms.games.PlayGames;
@@ -26,11 +28,6 @@ public class PlayGamesPlugin extends Plugin {
     // Two devices writing at once is the only way to get a conflict. Whichever
     // copy loses still lives on its device and gets merged in on its next sync.
     private static final int CONFLICT_POLICY = SnapshotsClient.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED;
-
-    // Request codes for Play's achievements and leaderboard screens; their
-    // results aren't used
-    private static final int RC_ACHIEVEMENTS = 9003;
-    private static final int RC_LEADERBOARD  = 9004;
 
     @Override
     public void load() {
@@ -81,9 +78,9 @@ public class PlayGamesPlugin extends Plugin {
                 call.reject("Achievements unavailable", t.getException());
                 return;
             }
-            // Play's UI closes itself right away unless started for a result
-            getActivity().startActivityForResult(t.getResult(), RC_ACHIEVEMENTS);
-            call.resolve();
+            // Play's UI closes itself right away unless started for a result.
+            // The call resolves once the player closes it.
+            startActivityForResult(call, t.getResult(), "playScreenClosed");
         });
     }
 
@@ -116,10 +113,16 @@ public class PlayGamesPlugin extends Plugin {
                 call.reject("Leaderboard unavailable", t.getException());
                 return;
             }
-            // Play's UI closes itself right away unless started for a result
-            getActivity().startActivityForResult(t.getResult(), RC_LEADERBOARD);
-            call.resolve();
+            // Play's UI closes itself right away unless started for a result.
+            // The call resolves once the player closes it.
+            startActivityForResult(call, t.getResult(), "playScreenClosed");
         });
+    }
+
+    // Play's achievements or leaderboard screen was closed. Its result isn't used.
+    @ActivityCallback
+    private void playScreenClosed(PluginCall call, ActivityResult result) {
+        if (call != null) call.resolve();
     }
 
     // Resolves { data: string }, empty when there's no cloud save yet
