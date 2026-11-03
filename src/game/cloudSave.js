@@ -1,5 +1,5 @@
 import {
-    playGamesSupported, isSignedIn, checkSignIn, signIn,
+    playGamesSupported, isSignedIn, checkSignIn, signIn, getPlayerId, setLocalSaveIsPlayers,
     pushUnlockedAchievements, pushHighScore, loadCloudSave, writeCloudSave,
 } from './playGames.js';
 import { ACHIEVEMENTS } from './achievements.js';
@@ -19,6 +19,14 @@ import { UPGRADES } from './upgrades.js';
 //   background): the merge is only uploaded. localStorage is left alone, since
 //   modules like the wardrobe and settings keep their own in-memory copies.
 //   Anything new in the cloud reaches this device on its next launch.
+//
+// The progress in localStorage belongs to one Play Games player, recorded
+// under OWNER_KEY. Merging only ever happens with that player's own cloud
+// save. When another player signs in on this device, the current progress is
+// set aside for its owner (STASH_KEY) and the new player's own progress is
+// loaded in its place; switching back brings the first player's progress back.
+// A save with no owner yet (a first sign-in, or a save from before owners were
+// recorded) goes to the first player who signs in.
 
 const SAVE_VERSION = 1;
 // Launch waits this long for the cloud at most; a slow network shouldn't keep
@@ -201,10 +209,87 @@ function log(...args) {
     console.info('[cloud-save]', ...args);
 }
 
+// ─── Owner ──────────────────────────────────────────────────────────────────
+const OWNER_KEY = 'blundaySaveOwner';
+const STASH_KEY = 'blundaySaveStash';
+const SETTINGS_KEY = 'blundaySettings';
+
+function readOwner() {
+    try { return localStorage.getItem(OWNER_KEY); } catch (_) { return null; }
+}
+
+function writeOwner(playerId) {
+    try { localStorage.setItem(OWNER_KEY, playerId); } catch (_) {}
+}
+
+// Progress set aside for players who aren't signed in on this device right
+// now, by player ID
+function readStash() {
+    try {
+        const stash = JSON.parse(localStorage.getItem(STASH_KEY));
+        return isPlainObject(stash) ? stash : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function writeStash(stash) {
+    try {
+        if (Object.keys(stash).length) localStorage.setItem(STASH_KEY, JSON.stringify(stash));
+        else localStorage.removeItem(STASH_KEY);
+    } catch (_) {}
+}
+
+// Unlike writeLocal, also removes synced keys the save doesn't have, so
+// nothing of the previous player's progress stays behind
+function replaceLocal(save) {
+    for (const key of SYNCED_KEYS) {
+        try {
+            if (save[key] === undefined) localStorage.removeItem(key);
+            else localStorage.setItem(key, JSON.stringify(save[key]));
+        } catch (_) {}
+    }
+}
+
+// Another player signed in: sets the current progress aside for its owner and
+// loads the signed-in player's own (what they left on this device, merged with
+// their cloud save). The settings are the device's and stay as they are.
+async function switchPlayer(owner, playerId, local, cloud) {
+    const stash = readStash();
+    const theirs = clean(stash[playerId]);
+    stash[owner] = local;
+    delete stash[playerId];
+
+    const merged = merge(theirs, cloud);
+    if (local[SETTINGS_KEY] !== undefined) merged[SETTINGS_KEY] = local[SETTINGS_KEY];
+    else delete merged[SETTINGS_KEY];
+
+    writeStash(stash);
+    replaceLocal(merged);
+    writeOwner(playerId);
+    setLocalSaveIsPlayers(true);
+    log('another player signed in: switched to their progress');
+    if (canonical(merged) !== canonical(cloud)) await writeCloudSave(serialize(merged));
+}
+
 // Merges local and cloud progress, writes the merge to localStorage when
 // writeLocal() allows it, and uploads it if the cloud doesn't have it yet.
-// Resolves true when localStorage changed.
+// Resolves true when localStorage changed. When the local progress belongs to
+// another player, it's swapped for the signed-in player's instead, and the
+// game reloads to pick that up if it's already running.
 async function syncWithCloud(canWriteLocal) {
+    const playerId = await getPlayerId();
+    const owner = readOwner();
+    if (owner && owner !== playerId) {
+        setLocalSaveIsPlayers(false);
+        const cloud = parse(await loadCloudSave());
+        await switchPlayer(owner, playerId, readLocal(), cloud);
+        // Game modules hold the previous player's progress in memory
+        if (!canWriteLocal()) window.location.reload();
+        return true;
+    }
+    if (!owner) writeOwner(playerId);
+    setLocalSaveIsPlayers(true);
     const cloud = parse(await loadCloudSave());
     const local = readLocal();
     const merged = merge(local, cloud);

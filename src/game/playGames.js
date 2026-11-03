@@ -38,6 +38,16 @@ export const playLeaderboardAvailable = playGamesSupported && PLAY_LEADERBOARD_I
 let signedIn = false;
 const subscribers = new Set();
 
+// Whether the progress on this device belongs to the signed-in player.
+// cloudSave.js sets it once it has checked (see claimLocalSave there); until
+// then nothing local reaches Play, so one account's achievements and scores
+// can never land on another account that signs in on the same device.
+let localSaveIsPlayers = false;
+
+export function setLocalSaveIsPlayers(value) {
+    localSaveIsPlayers = value;
+}
+
 function log(...args) {
     console.info('[play-games]', ...args);
 }
@@ -101,7 +111,7 @@ export async function signIn() {
 
 function unlockOnPlay(id) {
     const playId = PLAY_ACHIEVEMENT_IDS[id];
-    if (!signedIn || !playId) return;
+    if (!signedIn || !localSaveIsPlayers || !playId) return;
     PlayGames.unlockAchievement({ id: playId }).catch(e => log(`unlock ${id} failed:`, e?.message ?? e));
 }
 
@@ -118,7 +128,7 @@ if (playGamesSupported) subscribeUnlocks(def => unlockOnPlay(def.id));
 // harmless, and covers scores set before the leaderboard existed or while
 // signed out.
 export function pushHighScore() {
-    if (!signedIn || !playLeaderboardAvailable) return;
+    if (!signedIn || !localSaveIsPlayers || !playLeaderboardAvailable) return;
     let best = 0;
     try { best = parseInt(localStorage.getItem('blundayHighScore'), 10) || 0; } catch (_) {}
     if (best <= 0) return;
@@ -141,6 +151,11 @@ export async function showPlayAchievements() {
     } catch (e) {
         log('achievements screen failed:', e?.message ?? e);
     }
+}
+
+// The signed-in player's Play Games ID
+export async function getPlayerId() {
+    return (await PlayGames.getPlayerId()).playerId;
 }
 
 // Raw cloud save text ('' when there is none yet)

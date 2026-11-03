@@ -58,6 +58,21 @@ public class PlayGamesPlugin extends Plugin {
         });
     }
 
+    // Resolves { playerId: string }: the signed-in Play Games player, so the
+    // web layer can tell whose progress the save on this device is
+    @PluginMethod
+    public void getPlayerId(PluginCall call) {
+        PlayGames.getPlayersClient(getActivity()).getCurrentPlayerId().addOnCompleteListener(t -> {
+            if (!t.isSuccessful() || t.getResult() == null || t.getResult().isEmpty()) {
+                call.reject("Player ID unavailable", t.getException());
+                return;
+            }
+            JSObject result = new JSObject();
+            result.put("playerId", t.getResult());
+            call.resolve(result);
+        });
+    }
+
     // Fire and forget: Play queues the unlock if the device is offline
     @PluginMethod
     public void unlockAchievement(PluginCall call) {
