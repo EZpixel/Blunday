@@ -2,6 +2,8 @@ import {
     playGamesSupported, isSignedIn, checkSignIn, signIn,
     pushUnlockedAchievements, pushHighScore, loadCloudSave, writeCloudSave,
 } from './playGames.js';
+import { ACHIEVEMENTS } from './achievements.js';
+import { UPGRADES } from './upgrades.js';
 
 // Cloud save through Play Games Saved Games: the localStorage progress keys,
 // bundled into one JSON blob. Local and cloud copies are always merged, never
@@ -68,7 +70,80 @@ function mergeWallet(local, cloud) {
 
 const SYNCED_KEYS = [...Object.keys(MERGE), GOLD_KEY, EARNED_KEY];
 
-function merge(local, cloud) {
+// ─── Validation ─────────────────────────────────────────────────────────────
+// Both copies are cleaned before merging. The merge keeps the larger value
+// for good, so one bad save (a hand-edited backup, a broken write) would
+// otherwise stick in the cloud and on every device it syncs to. Values that
+// can't be right are dropped or clamped; the rest of the save is kept.
+// achievements.js and upgrades.js hold no state of their own at load time,
+// so importing their definitions here doesn't read the save before the merge
+// (see main.jsx). wardrobe.js does, so its items are checked by shape only.
+const ACHIEVEMENT_IDS = new Set(ACHIEVEMENTS.map(a => a.id));
+const MAX_TIER = Object.fromEntries(UPGRADES.map(u => [u.id, u.maxTier]));
+const MAX_WARDROBE_ITEMS = 200;
+const MAX_ID_LENGTH = 64;
+
+const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+// A whole number from 0 up to the largest integer JS represents exactly, or undefined
+function count(v) {
+    return Number.isSafeInteger(v) && v >= 0 ? v : undefined;
+}
+
+function cleanCounts(obj, maxOf) {
+    if (!isPlainObject(obj)) return undefined;
+    const out = {};
+    for (const [key, value] of Object.entries(obj)) {
+        const n = count(value);
+        if (n === undefined) continue;
+        if (maxOf) {
+            if (!(key in maxOf)) continue;
+            out[key] = Math.min(n, maxOf[key]);
+        } else {
+            out[key] = n;
+        }
+    }
+    return out;
+}
+
+const isId = v => typeof v === 'string' && v.length > 0 && v.length <= MAX_ID_LENGTH;
+
+const CLEAN = {
+    blundayHighScore:    count,
+    blundayUpgrades:     v => cleanCounts(v, MAX_TIER),
+    blundayStats:        v => cleanCounts(v),
+    blundayAchievements: v => isPlainObject(v)
+        ? Object.fromEntries(Object.keys(v).filter(id => ACHIEVEMENT_IDS.has(id) && v[id]).map(id => [id, true]))
+        : undefined,
+    blundayWardrobe:     v => isPlainObject(v)
+        ? {
+            ...(isPlainObject(v.look) ? { look: v.look } : {}),
+            unlocked: Array.isArray(v.unlocked) ? unique(v.unlocked.filter(isId)).slice(0, MAX_WARDROBE_ITEMS) : [],
+        }
+        : undefined,
+    blundaySettings:     v => isPlainObject(v) ? v : undefined,
+    [GOLD_KEY]:          count,
+    [EARNED_KEY]:        count,
+};
+
+function clean(save) {
+    const out = {};
+    if (!isPlainObject(save)) return out;
+    for (const [key, cleanValue] of Object.entries(CLEAN)) {
+        if (save[key] === undefined) continue;
+        const value = cleanValue(save[key]);
+        if (value !== undefined) out[key] = value;
+    }
+    // The lifetime total includes everything still in the wallet
+    if (out[GOLD_KEY] !== undefined && out[EARNED_KEY] !== undefined && out[EARNED_KEY] < out[GOLD_KEY]) {
+        out[EARNED_KEY] = out[GOLD_KEY];
+    }
+    return out;
+}
+
+function merge(rawLocal, rawCloud) {
+    const local = clean(rawLocal);
+    const cloud = clean(rawCloud);
     const out = {};
     for (const [key, mergeValues] of Object.entries(MERGE)) {
         const l = local[key];
@@ -118,8 +193,8 @@ function parse(text) {
     const blob = JSON.parse(text);
     // Written by a newer version of the game: merging it here could drop
     // progress this version doesn't know about
-    if (blob.v > SAVE_VERSION) throw new Error(`cloud save is version ${blob.v}, this game reads ${SAVE_VERSION}`);
-    return blob.data || {};
+    if (blob?.v > SAVE_VERSION) throw new Error(`cloud save is version ${blob.v}, this game reads ${SAVE_VERSION}`);
+    return blob?.data || {};
 }
 
 function log(...args) {
