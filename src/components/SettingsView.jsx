@@ -93,7 +93,7 @@ export default function SettingsView({ onBack, onCredits }) {
                 <div className="settings-switch-row">
                     <div>
                         <strong>Experimental Mode</strong>
-                        <span>Brand new features first. Right now: a rather rude sound when Blunday falls. Things may get weird.</span>
+                        <span>Brand new features first. Things may get weird.</span>
                     </div>
                     <button
                         className="settings-switch"

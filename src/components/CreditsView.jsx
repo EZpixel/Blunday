@@ -20,7 +20,7 @@ export default function CreditsView({ onBack }) {
 
                 <section className="credits-block">
                     <h2>A game by</h2>
-                    <p className="credits-name">EzPixel</p>
+                    <p className="credits-name">EZpixel</p>
                     <p>Design, code, art direction and every last bounce — a one-person indie studio.</p>
                 </section>
 
