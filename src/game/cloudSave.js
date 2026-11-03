@@ -1,6 +1,6 @@
 import {
     playGamesSupported, isSignedIn, checkSignIn, signIn,
-    pushUnlockedAchievements, loadCloudSave, writeCloudSave,
+    pushUnlockedAchievements, pushHighScore, loadCloudSave, writeCloudSave,
 } from './playGames.js';
 
 // Cloud save through Play Games Saved Games: the localStorage progress keys,
@@ -157,6 +157,7 @@ export async function initCloudSave() {
         const changed = await syncWithCloud(() => !started);
         log(changed ? 'restored progress from the cloud' : 'in sync');
         pushUnlockedAchievements();
+        pushHighScore();
     })().catch(e => log('sync failed:', e?.message ?? e));
 
     await Promise.race([work, new Promise(resolve => setTimeout(resolve, STARTUP_TIMEOUT_MS))]);
@@ -193,6 +194,7 @@ export async function signInAndSync() {
         await uploading;
         const changed = await syncWithCloud(() => true);
         pushUnlockedAchievements();
+        pushHighScore();
         if (changed) window.location.reload();
     } catch (e) {
         log('sync failed:', e?.message ?? e);

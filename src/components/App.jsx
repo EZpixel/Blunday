@@ -22,6 +22,7 @@ import { initAds, shouldOfferDouble, showRewardedAd } from '../game/ads.js';
 import { subscribeUnlocks } from '../game/achievements.js';
 import { rewardForAchievement } from '../game/wardrobe.js';
 import { requestSync } from '../game/cloudSave.js';
+import { pushHighScore } from '../game/playGames.js';
 import { shouldShowPlayGamesPrompt } from '../game/playGamesPrompt.js';
 import { subscribeNotifications } from '../game/notify.js';
 import PlayGamesPrompt from './PlayGamesPrompt.jsx';
@@ -320,7 +321,10 @@ export default function App() {
 
     // ── Cloud save — uploaded as each run ends (and when the app is put away) ──
     useEffect(() => {
-        if (snapshot.gameState === 'gameover') requestSync();
+        if (snapshot.gameState === 'gameover') {
+            requestSync();
+            pushHighScore(); // the leaderboard keeps the player's best
+        }
     }, [snapshot.gameState]);
 
     // ── Rewarded ad offer — decided once as each run ends ──────────────────────

@@ -28,15 +28,22 @@ export function installReliableClicks(root) {
     let pressed = null; // { button, pointerId }
 
     function onPointerDown(e) {
+        swallowNativeClick = false;
         if (e.button !== 0) return;
         const button = e.target.closest?.('button');
         pressed = button && !button.disabled ? { button, pointerId: e.pointerId } : null;
     }
 
+    // Set when a press was released (on its button or not): the browser's own
+    // click for that tap still follows, and must not land on whatever the press
+    // just opened, such as a dialog backdrop that cancels on a tap
+    let swallowNativeClick = false;
+
     function onPointerUp(e) {
         if (!pressed || e.pointerId !== pressed.pointerId) return;
         const { button } = pressed;
         pressed = null;
+        swallowNativeClick = true;
         // Touch pointers stay targeted at where they started, so check the
         // release point to see whether the finger is still on (or right by) the button
         if (button.isConnected && !button.disabled && releasedOnButton(button, e)) button.click();
@@ -46,10 +53,14 @@ export function installReliableClicks(root) {
         if (pressed && e.pointerId === pressed.pointerId) pressed = null;
     }
 
-    // Native clicks from a pointer (detail > 0) are replaced by the ones above;
-    // our own button.click() and keyboard clicks have detail 0 and pass through
+    // Native clicks from a pointer (detail > 0) on buttons are replaced by the
+    // ones above, and so is the one that trails a handled press, wherever it
+    // lands; our own button.click() and keyboard clicks have detail 0 and pass through
     function onClick(e) {
-        if (e.detail > 0 && e.target.closest?.('button')) {
+        if (e.detail === 0) return;
+        const trailsPress = swallowNativeClick;
+        swallowNativeClick = false;
+        if (trailsPress || e.target.closest?.('button')) {
             e.preventDefault();
             e.stopPropagation();
         }

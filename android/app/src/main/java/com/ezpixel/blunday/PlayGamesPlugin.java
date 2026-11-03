@@ -27,6 +27,11 @@ public class PlayGamesPlugin extends Plugin {
     // copy loses still lives on its device and gets merged in on its next sync.
     private static final int CONFLICT_POLICY = SnapshotsClient.RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED;
 
+    // Request codes for Play's achievements and leaderboard screens; their
+    // results aren't used
+    private static final int RC_ACHIEVEMENTS = 9003;
+    private static final int RC_LEADERBOARD  = 9004;
+
     @Override
     public void load() {
         PlayGamesSdk.initialize(getContext());
@@ -76,7 +81,43 @@ public class PlayGamesPlugin extends Plugin {
                 call.reject("Achievements unavailable", t.getException());
                 return;
             }
-            getActivity().startActivity(t.getResult());
+            // Play's UI closes itself right away unless started for a result
+            getActivity().startActivityForResult(t.getResult(), RC_ACHIEVEMENTS);
+            call.resolve();
+        });
+    }
+
+    // Fire and forget: Play keeps only the player's best, and queues the
+    // submission if the device is offline
+    @PluginMethod
+    public void submitScore(PluginCall call) {
+        String id = call.getString("id");
+        // optLong, not getLong: a whole number from JS arrives as an Integer,
+        // which getLong doesn't accept
+        long score = call.getData().optLong("score", -1);
+        if (id == null || id.isEmpty() || score < 0) {
+            call.reject("Missing leaderboard id or score");
+            return;
+        }
+        PlayGames.getLeaderboardsClient(getActivity()).submitScore(id, score);
+        call.resolve();
+    }
+
+    // Play's own screen for one leaderboard
+    @PluginMethod
+    public void showLeaderboard(PluginCall call) {
+        String id = call.getString("id");
+        if (id == null || id.isEmpty()) {
+            call.reject("Missing leaderboard id");
+            return;
+        }
+        PlayGames.getLeaderboardsClient(getActivity()).getLeaderboardIntent(id).addOnCompleteListener(t -> {
+            if (!t.isSuccessful()) {
+                call.reject("Leaderboard unavailable", t.getException());
+                return;
+            }
+            // Play's UI closes itself right away unless started for a result
+            getActivity().startActivityForResult(t.getResult(), RC_LEADERBOARD);
             call.resolve();
         });
     }

@@ -8,26 +8,32 @@ export const playGamesSupported = Capacitor.isNativePlatform() && Capacitor.getP
 const PlayGames = registerPlugin('PlayGames');
 
 // Play Console achievement IDs (Play Games Services → Achievements), by the
-// game's own ids in achievements.js. Achievements left empty stay local only.
+// game's own ids in achievements.js (matched by title). Achievements left
+// empty stay local only.
 const PLAY_ACHIEVEMENT_IDS = Object.freeze({
-    jetpack:        '',
-    boots:          '',
-    star:           '',
-    gold_bag:       '',
-    gold_bar:       '',
-    red_gem:        '',
-    score_10000:    '',
-    score_30000:    '',
-    score_100000:   '',
-    wood_1000:      '',
-    star_1000:      '',
-    no_gold_10000:  '',
-    no_power_10000: '',
-    all_maxed:      '',
-    jetpack_save:   '',
-    liftoff:        '',
-    gold_100000:    '',
+    jetpack:        'CgkIjIzjoZEdEAIQDQ',
+    boots:          'CgkIjIzjoZEdEAIQCQ',
+    star:           'CgkIjIzjoZEdEAIQDg',
+    gold_bag:       'CgkIjIzjoZEdEAIQEQ',
+    gold_bar:       'CgkIjIzjoZEdEAIQEA',
+    red_gem:        'CgkIjIzjoZEdEAIQCw',
+    score_10000:    'CgkIjIzjoZEdEAIQBA',
+    score_30000:    'CgkIjIzjoZEdEAIQBQ',
+    score_100000:   'CgkIjIzjoZEdEAIQCg',
+    wood_1000:      'CgkIjIzjoZEdEAIQCA',
+    star_1000:      'CgkIjIzjoZEdEAIQDw',
+    no_gold_10000:  'CgkIjIzjoZEdEAIQAg',
+    no_power_10000: 'CgkIjIzjoZEdEAIQAQ',
+    all_maxed:      'CgkIjIzjoZEdEAIQAw',
+    jetpack_save:   'CgkIjIzjoZEdEAIQDA',
+    liftoff:        'CgkIjIzjoZEdEAIQBg',
+    gold_100000:    'CgkIjIzjoZEdEAIQBw',
 });
+
+// Play Console leaderboard ID (Play Games Services → Leaderboards) for the
+// high score. While empty, scores stay local and the Settings button is hidden.
+const PLAY_LEADERBOARD_ID = 'CgkIjIzjoZEdEAIQEw';
+export const playLeaderboardAvailable = playGamesSupported && PLAY_LEADERBOARD_ID !== '';
 
 let signedIn = false;
 const subscribers = new Set();
@@ -106,6 +112,27 @@ export function pushUnlockedAchievements() {
 }
 
 if (playGamesSupported) subscribeUnlocks(def => unlockOnPlay(def.id));
+
+// The best score on this device, sent to the leaderboard. Play keeps only the
+// player's best, so sending it again (after every run, on every sign-in) is
+// harmless, and covers scores set before the leaderboard existed or while
+// signed out.
+export function pushHighScore() {
+    if (!signedIn || !playLeaderboardAvailable) return;
+    let best = 0;
+    try { best = parseInt(localStorage.getItem('blundayHighScore'), 10) || 0; } catch (_) {}
+    if (best <= 0) return;
+    PlayGames.submitScore({ id: PLAY_LEADERBOARD_ID, score: best }).catch(e => log('score submit failed:', e?.message ?? e));
+}
+
+export async function showPlayLeaderboard() {
+    if (!signedIn || !playLeaderboardAvailable) return;
+    try {
+        await PlayGames.showLeaderboard({ id: PLAY_LEADERBOARD_ID });
+    } catch (e) {
+        log('leaderboard screen failed:', e?.message ?? e);
+    }
+}
 
 export async function showPlayAchievements() {
     if (!signedIn) return;

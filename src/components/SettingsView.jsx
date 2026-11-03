@@ -4,7 +4,7 @@ import { getSettings, updateSettings, subscribeSettings } from '../game/settings
 import BackButton from './BackButton.jsx';
 import MenuEmblem from './MenuEmblem.jsx';
 import { needsPrivacyOptions, showPrivacyOptions } from '../game/ads.js';
-import { playGamesSupported, isSignedIn, subscribeSignIn, showPlayAchievements } from '../game/playGames.js';
+import { playGamesSupported, isSignedIn, subscribeSignIn, showPlayAchievements, showPlayLeaderboard, playLeaderboardAvailable } from '../game/playGames.js';
 import { signInAndSync } from '../game/cloudSave.js';
 import PlayGamesLogo from './PlayGamesLogo.jsx';
 import { notify } from '../game/notify.js';
@@ -112,7 +112,15 @@ export default function SettingsView({ onBack, onCredits }) {
                     <h2>Progress</h2>
                     {/* Signed in, progress is backed up to the player's Google account */}
                     {playGamesSupported && (signedIn
-                        ? <button className="emblem-button" onClick={showPlayAchievements}><MenuEmblem icon="trophy" />Play Games</button>
+                        ? <>
+                            {/* Play Games v2 has no sign-out, so being connected is
+                                just a status; the button opens Play's own achievements */}
+                            <p className="play-games-status"><PlayGamesLogo />Connected to Play Games</p>
+                            <button className="emblem-button" onClick={showPlayAchievements}><MenuEmblem icon="trophy" />Play Achievements</button>
+                            {playLeaderboardAvailable && (
+                                <button className="emblem-button" onClick={showPlayLeaderboard}><MenuEmblem icon="podium" />Leaderboard</button>
+                            )}
+                        </>
                         : <button className="emblem-button play-games-connect" onClick={handleConnect} disabled={connect === 'connecting'}>
                             <PlayGamesLogo />{connect === 'connecting' ? 'Connecting...' : 'Connect Play Games'}
                         </button>)}

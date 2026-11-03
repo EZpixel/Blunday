@@ -1403,6 +1403,16 @@ body {
     white-space: nowrap;
 }
 
+/* "Connected to Play Games": a status line, not a button */
+.play-games-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+}
+
 /* ── Character screen ────────────────────────────────────────────────────── */
 .character-overlay {
     gap: 14px;
