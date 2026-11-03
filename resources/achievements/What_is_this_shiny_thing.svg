@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "What is this shiny thing?". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#9fe0ff"/><stop offset="1" stop-color="#2a62b8"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <circle cx="256" cy="150" r="130" fill="url(#glowY)"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(256 318) rotate(0) scale(4.1) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-blue)" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><rect x="8" y="10" width="9" height="9" fill="#fff"/><rect x="13" y="10" width="4" height="4" fill="#111"/><rect x="23" y="10" width="9" height="9" fill="#fff"/><rect x="23" y="10" width="4" height="4" fill="#111"/><ellipse cx="20" cy="25.5" rx="2.2" ry="2.6" fill="#334"/><g transform="translate(0 -10.5)"><polygon points="12.5,6 15.26,10.7 20.58,11.87 16.97,15.95 17.5,21.38 12.5,19.2 7.5,21.38 8.03,15.95 4.42,11.87 9.74,10.7" fill="rgba(255,190,40,0.3)" stroke="#ffb000" stroke-width="1.9" stroke-linejoin="round"/><polygon points="27.5,6 30.26,10.7 35.58,11.87 31.97,15.95 32.5,21.38 27.5,19.2 22.5,21.38 23.03,15.95 19.42,11.87 24.74,10.7" fill="rgba(255,190,40,0.3)" stroke="#ffb000" stroke-width="1.9" stroke-linejoin="round"/><path d="M17 13H23" stroke="#ffb000" stroke-width="1.9"/></g></g><polygon points="256,82 274.62,122.37 318.77,127.6 286.13,157.79 294.79,201.4 256,179.68 217.21,201.4 225.87,157.79 193.23,127.6 237.38,122.37" fill="#ffdd00" stroke="#0d1640" stroke-width="10" stroke-linejoin="round"/><polygon points="244,118 249.88,131.91 264.92,133.2 253.51,143.09 256.93,157.8 244,150 231.07,157.8 234.49,143.09 223.08,133.2 238.12,131.91" fill="#fff6b0" opacity="0.8"/><path d="M150 90Q150 110 170 110Q150 110 150 130Q150 110 130 110Q150 110 150 90Z" fill="#fff"/><path d="M360 78Q360 92 374 92Q360 92 360 106Q360 92 346 92Q360 92 360 78Z" fill="#fff"/><path d="M372 192Q372 210 390 210Q372 210 372 228Q372 210 354 210Q372 210 372 192Z" fill="#fff"/><path d="M138 202Q138 214 150 214Q138 214 138 226Q138 214 126 214Q138 214 138 202Z" fill="#fff"/>
+  </g>
+</svg>

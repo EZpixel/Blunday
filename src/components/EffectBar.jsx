@@ -1,4 +1,4 @@
-import AchievementIcon from './AchievementIcon.jsx';
+import PowerUpIcon from './PowerUpIcon.jsx';
 
 export default function EffectBar({ effects }) {
     if (!effects || effects.length === 0) return null;
@@ -11,7 +11,7 @@ export default function EffectBar({ effects }) {
                 return (
                     <div className="effect-bar-wrapper" key={e.type}>
                         <span className="effect-bar-icon" title={label} aria-label={label}>
-                            <AchievementIcon icon={e.type} size={18} />
+                            <PowerUpIcon icon={e.type} size={18} />
                         </span>
                         <div className="effect-bar-track">
                             <div className={`effect-bar-fill ${e.type}`} style={{ width: `${pct}%` }} />

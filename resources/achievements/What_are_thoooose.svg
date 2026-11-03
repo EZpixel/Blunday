@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "What are thoooose!". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#d9b8ff"/><stop offset="1" stop-color="#6a2bb0"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 330L556 330L545.78 407.65ZM256 330L515.81 480L468.13 542.13ZM256 330L406 589.81L333.65 619.78ZM256 330L256 630L178.35 619.78ZM256 330L106 589.81L43.87 542.13ZM256 330L-3.81 480L-33.78 407.65ZM256 330L-44 330L-33.78 252.35ZM256 330L-3.81 180L43.87 117.87ZM256 330L106 70.19L178.35 40.22ZM256 330L256 30L333.65 40.22ZM256 330L406 70.19L468.13 117.87ZM256 330L515.81 180L545.78 252.35Z" fill="#fff" opacity="0.12"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M181 370l-24 12 48 12 -48 12 48 12 -24 10" fill="none" stroke="#0d1640" stroke-width="15" stroke-linejoin="round" stroke-linecap="round"/><path d="M181 370l-24 12 48 12 -48 12 48 12 -24 10" fill="none" stroke="#ccaaff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M150 268H212V318V364H120V334Q120 318 130 318H150Z" fill="#8844cc" stroke="#0d1640" stroke-width="10" stroke-linejoin="round"/><rect x="150" y="268" width="62" height="16" fill="#aa77ee" stroke="#0d1640" stroke-width="5"/><rect x="120" y="356" width="92" height="12" rx="4" fill="#55288a" stroke="#0d1640" stroke-width="5"/><path d="M331 370l-24 12 48 12 -48 12 48 12 -24 10" fill="none" stroke="#0d1640" stroke-width="15" stroke-linejoin="round" stroke-linecap="round"/><path d="M331 370l-24 12 48 12 -48 12 48 12 -24 10" fill="none" stroke="#ccaaff" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/><path d="M300 268H362V318H382Q392 318 392 334V364H300Z" fill="#8844cc" stroke="#0d1640" stroke-width="10" stroke-linejoin="round"/><rect x="300" y="268" width="62" height="16" fill="#aa77ee" stroke="#0d1640" stroke-width="5"/><rect x="300" y="356" width="92" height="12" rx="4" fill="#55288a" stroke="#0d1640" stroke-width="5"/><g transform="translate(256 205) rotate(0) scale(3.4) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.9411764705882355"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.9411764705882355"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-blue)" stroke="#0d1640" stroke-width="2.9411764705882355"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><rect x="6.5" y="8.5" width="12" height="12" fill="#fff"/><rect x="11" y="17.5" width="3" height="3" fill="#111"/><rect x="21.5" y="8.5" width="12" height="12" fill="#fff"/><rect x="26" y="17.5" width="3" height="3" fill="#111"/><path d="M8 6Q12.5 2.5 17 5.5" fill="none" stroke="#334" stroke-width="2" stroke-linecap="round"/><path d="M23 5.5Q27.5 2.5 32 6" fill="none" stroke="#334" stroke-width="2" stroke-linecap="round"/><ellipse cx="20" cy="26" rx="3.4" ry="4.2" fill="#334"/><path d="M-2 6L-6 -3L4 -6L8 -15L15 -5L20 -18L25 -5L32 -15L36 -6L46 -3L42 6L40 3L0 3Z" fill="#ffd23a" stroke="#0d1640" stroke-width="1.4705882352941178" stroke-linejoin="round"/><path d="M9 -9L13 -4M20 -12L21.5 -5M31 -9L27.5 -4" stroke="#fff" stroke-width="1" opacity="0.6" stroke-linecap="round"/></g><g fill="#fff" stroke="#0d1640" stroke-width="5"><rect x="370" y="104" width="16" height="44" rx="8" transform="rotate(14 378 126)"/><circle cx="371" cy="168" r="9"/><rect x="398" y="124" width="14" height="36" rx="7" transform="rotate(22 405 142)"/><circle cx="397" cy="176" r="8"/></g>
+  </g>
+</svg>

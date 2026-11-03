@@ -1,17 +1,19 @@
 {
   "name": "blunday",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "android": "vite build && cap sync android"
+    "android": "vite build && cap sync android",
+    "icons": "node scripts/build-icons.mjs",
+    "play:achievements": "node scripts/build-play-achievements.mjs"
   },
   "dependencies": {
-    "@capacitor-community/admob": "^8.1.0",
+    "@capacitor-community/admob": "^8.2.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "react": "^19.2.8",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",

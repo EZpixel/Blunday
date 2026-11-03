@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// The version lives in package.json only (the title screen and credits read it
+// from there too). versionCode is derived from it as major·10000 + minor·100 +
+// patch (1.0.2 → 10002), so every version bump also raises it, as Play requires.
+// Minor and patch must stay below 100.
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+def (versionMajor, versionMinor, versionPatch) = appVersion.tokenize('.-')[0..2].collect { it as int }
+if (versionMinor >= 100 || versionPatch >= 100) throw new GradleException("Version $appVersion: minor and patch must be below 100")
+
 android {
     namespace = "com.ezpixel.blunday"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +15,8 @@ android {
         applicationId "com.ezpixel.blunday"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.0.1"
+        versionCode versionMajor * 10000 + versionMinor * 100 + versionPatch
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -38,6 +46,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation "com.google.android.gms:play-services-games-v2:$playServicesGamesVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "Raising the Bar". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#ffa8d0"/><stop offset="1" stop-color="#b0306e"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 150L556 150L548.48 216.76ZM256 150L526.29 280.17L490.55 337.05ZM256 150L443.05 384.55L386.17 420.29ZM256 150L322.76 442.48L256 450ZM256 150L189.24 442.48L125.83 420.29ZM256 150L68.95 384.55L21.45 337.05ZM256 150L-14.29 280.17L-36.48 216.76ZM256 150L-44 150L-36.48 83.24ZM256 150L-14.29 19.83L21.45 -37.05ZM256 150L68.95 -84.55L125.83 -120.29ZM256 150L189.24 -142.48L256 -150ZM256 150L322.76 -142.48L386.17 -120.29ZM256 150L443.05 -84.55L490.55 -37.05ZM256 150L526.29 19.83L548.48 83.24Z" fill="#fff" opacity="0.12"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M194 250L168 158" stroke="#0d1640" stroke-width="46" stroke-linecap="round"/><path d="M194 250L168 158" stroke="#5c636e" stroke-width="26" stroke-linecap="round"/><path d="M318 250L344 158" stroke="#0d1640" stroke-width="46" stroke-linecap="round"/><path d="M318 250L344 158" stroke="#5c636e" stroke-width="26" stroke-linecap="round"/><g transform="translate(256 306) rotate(0) scale(3.9) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#5c636e" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#5c636e" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-grey)" stroke="#0d1640" stroke-width="2.5641025641025643"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><path d="M9 14.5Q12.5 18 16 14.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 14.5Q27.5 18 31 14.5" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 5.5L17 8" fill="none" stroke="#2a2e36" stroke-width="2" stroke-linecap="round"/><path d="M32 5.5L23 8" fill="none" stroke="#2a2e36" stroke-width="2" stroke-linecap="round"/><rect x="12.5" y="22.5" width="15" height="6" rx="1.5" fill="#fff" stroke="#2a2e36" stroke-width="1.6"/><path d="M12.5 25.5H27.5M17.5 22.5V28.5M22.5 22.5V28.5" stroke="#2a2e36" stroke-width="1.1"/></g><path d="M136 174L162 104H350L376 174Z" fill="#ffcc33" stroke="#0d1640" stroke-width="10" stroke-linejoin="round"/><path d="M162 104H350L340 126H172Z" fill="#ffe680"/><path d="M178 156L192 120" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.6"/><path d="M110 124L124 140M402 124L388 140M100 160H118M412 160H394" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path transform="rotate(-20 120 256)" d="M120 238Q133.5 256.9 130.8 265A11.16 11.16 0 0 1 109.2 265Q106.5 256.9 120 238Z" fill="#8fd8ff" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path transform="rotate(20 392 242)" d="M392 227Q403.25 242.75 401 249.5A9.3 9.3 0 0 1 383 249.5Q380.75 242.75 392 227Z" fill="#8fd8ff" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path transform="rotate(20 380 300)" d="M380 289Q388.25 300.55 386.6 305.5A6.82 6.82 0 0 1 373.4 305.5Q371.75 300.55 380 289Z" fill="#8fd8ff" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+</svg>

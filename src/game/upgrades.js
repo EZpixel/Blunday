@@ -5,7 +5,6 @@ const STORAGE_KEY = 'blundayUpgrades';
 export const UPGRADES = Object.freeze([
     {
         id:            'moveSpeed',
-        icon:          '👟',
         title:         'Nimble Feet',
         description:   'Move left/right faster.',
         maxTier:       5,
@@ -14,7 +13,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'higherJump',
-        icon:          '🦵',
         title:         'Springy Spaghetti Legs',
         description:   '+5% bounce height per tier.',
         maxTier:       5,
@@ -23,7 +21,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'jetpackFuel',
-        icon:          '⛽',
         title:         'Extra Thicc Fuel Tank',
         description:   'Jetpack fuel lasts longer — triples at max tier.',
         maxTier:       5,
@@ -32,7 +29,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'umbrella',
-        icon:          '🌂',
         title:         'Mary Poppins Mode',
         description:   'Umbrella slows your fall more — up to 75% at max tier.',
         maxTier:       5,
@@ -41,7 +37,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'luck',
-        icon:          '🍀',
         title:         'Four-Leaf Cloverdose',
         description:   'Gold pickups spawn more often.',
         maxTier:       5,
@@ -50,7 +45,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'powerUpFreq',
-        icon:          '🎁',
         title:         'Aura Farming',
         description:   'Jetpacks, boots, stars, and umbrellas spawn more often.',
         maxTier:       3,
@@ -59,7 +53,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'starPower',
-        icon:          '⭐',
         title:         'Midas Stardust',
         description:   'Stars multiply gold you grab while shining — up to 10x.',
         maxTier:       5,
@@ -68,7 +61,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'breakableGrip',
-        icon:          '🐾',
         title:         'Sticky Toe Beans',
         description:   'Breakable platforms survive extra landings.',
         maxTier:       2,
@@ -77,7 +69,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'backupJetpack',
-        icon:          '🚀',
         title:         'Ctrl+Z Jetpack',
         description:   'Undo one deadly fall per run with an emergency backup jetpack.',
         maxTier:       1,
@@ -86,7 +77,6 @@ export const UPGRADES = Object.freeze([
     },
     {
         id:            'boosterLiftOff',
-        icon:          '🔥',
         title:         'Booster Ignition & Lift Off',
         description:   'Every run starts strapped to twin rockets that blast you straight to 10,000.',
         maxTier:       1,

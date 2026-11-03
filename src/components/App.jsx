@@ -14,12 +14,18 @@ import CharacterButton from './CharacterButton.jsx';
 import CharacterView from './CharacterView.jsx';
 import MoveHint from './MoveHint.jsx';
 import FullscreenButton from './FullscreenButton.jsx';
+import BadgeArt from './BadgeArt.jsx';
+import { achievementArt, preloadBadgeArt } from '../game/badgeArt.js';
 import { installClickSounds, playSfx } from '../game/audio.js';
 import { installReliableClicks } from '../game/buttons.js';
 import { initAds, shouldOfferDouble, showRewardedAd } from '../game/ads.js';
 import { subscribeUnlocks } from '../game/achievements.js';
-import { rewardForAchievement, isWardrobeEnabled } from '../game/wardrobe.js';
-import { subscribeSettings } from '../game/settings.js';
+import { rewardForAchievement } from '../game/wardrobe.js';
+import { requestSync } from '../game/cloudSave.js';
+import { pushHighScore } from '../game/playGames.js';
+import { shouldShowPlayGamesPrompt } from '../game/playGamesPrompt.js';
+import { subscribeNotifications } from '../game/notify.js';
+import PlayGamesPrompt from './PlayGamesPrompt.jsx';
 
 const MOVE_HINT_MS = 10000;
 
@@ -62,10 +68,7 @@ export default function App() {
     });
 
     const [view, setView] = useState('menu');
-    // The wardrobe is part of Experimental Mode
-    const [wardrobe, setWardrobe] = useState(isWardrobeEnabled);
-    useEffect(() => subscribeSettings(() => setWardrobe(isWardrobeEnabled())), []);
-    // Queued notifications: { key, kind: 'achievement' | 'save', title, reward }
+    // Queued notifications: { key, kind: 'achievement' | 'save' | 'message', id, title, reward, text }
     const [toasts, setToasts] = useState([]);
     // Rewarded "2x gold" offer for the current game over: null, or
     // { state: 'offer' | 'watching' | 'done' | 'failed', amount }
@@ -81,6 +84,8 @@ export default function App() {
     useEffect(() => installClickSounds(wrapperRef.current), []);
     useEffect(() => installReliableClicks(wrapperRef.current), []);
     useEffect(() => { initAds(); }, []);
+    // Badge art is ready before any screen or toast needs it
+    useEffect(() => { preloadBadgeArt(); }, []);
 
     // ── UI scaling — keep the UI layer covering the game area at any size ────
     useEffect(() => {
@@ -259,6 +264,20 @@ export default function App() {
         };
     }, []); // empty deps: run once per mount
 
+    // ── Play Games prompt — once, on the title screen, for players not signed in
+    // Only opens over the bare title screen: if a run or another screen has
+    // started by the time the sign-in check answers, it waits for the next launch.
+    useEffect(() => {
+        let cancelled = false;
+        shouldShowPlayGamesPrompt().then(show => {
+            if (!show || cancelled) return;
+            if (engineRef.current?.getSnapshot().gameState !== 'idle' || viewRef.current !== 'menu') return;
+            setView('playGames');
+            viewRef.current = 'playGames';
+        });
+        return () => { cancelled = true; };
+    }, []);
+
     // ── Notifications — achievements (from anywhere) and the jetpack save ─────
     // Unlocks that land together are queued and shown one after another, each
     // with its own sound, and mention the wardrobe item they unlock
@@ -267,10 +286,12 @@ export default function App() {
     }
 
     useEffect(() => subscribeUnlocks(def => {
-        // The reward is only mentioned while the wardrobe (Experimental Mode) is on
-        const reward = isWardrobeEnabled() ? rewardForAchievement(def.id)?.name : undefined;
-        queueToast({ kind: 'achievement', title: def.title, reward });
+        const reward = rewardForAchievement(def.id)?.name;
+        queueToast({ kind: 'achievement', id: def.id, title: def.title, reward });
     }), []);
+
+    // Plain messages from other screens (see notify.js)
+    useEffect(() => subscribeNotifications(text => queueToast({ kind: 'message', text })), []);
 
     const toast = toasts[0] || null;
     useEffect(() => {
@@ -297,6 +318,14 @@ export default function App() {
     useEffect(() => {
         if (snapshot.justSaved) queueToast({ kind: 'save' });
     }, [snapshot.justSaved]);
+
+    // ── Cloud save — uploaded as each run ends (and when the app is put away) ──
+    useEffect(() => {
+        if (snapshot.gameState === 'gameover') {
+            requestSync();
+            pushHighScore(); // the leaderboard keeps the player's best
+        }
+    }, [snapshot.gameState]);
 
     // ── Rewarded ad offer — decided once as each run ends ──────────────────────
     useEffect(() => {
@@ -333,7 +362,7 @@ export default function App() {
                 {/* Title and game over screens share the character, settings and full screen buttons */}
                 {(gameState === 'idle' || gameState === 'gameover') && view === 'menu' && (
                     <>
-                        {wardrobe && <CharacterButton onClick={() => setView('character')} />}
+                        <CharacterButton onClick={() => setView('character')} />
                         <SettingsButton onClick={() => setView('settings')} />
                         <FullscreenButton />
                     </>
@@ -342,7 +371,9 @@ export default function App() {
                 <MoveHint visible={gameState === 'running' && moveHintRun !== null} />
                 {gameState === 'idle' && (
                     sharedView ?? (
-                        view === 'achievements'
+                        view === 'playGames'
+                            ? <PlayGamesPrompt onDone={() => setView('menu')} />
+                            : view === 'achievements'
                             ? <AchievementsView onBack={() => setView('menu')} />
                             : view === 'upgrades'
                                 ? <UpgradesView onBack={() => setView('menu')} />
@@ -362,12 +393,17 @@ export default function App() {
                     )
                 )}
                 {toast && (
-                    <div className="toast" key={toast.key}>
+                    <div className={'toast' + (toast.kind === 'achievement' ? ' toast-achievement' : '')} key={toast.key}>
                         {toast.kind === 'save'
                             ? 'Saved by your Ctrl+Z Jetpack!'
+                            : toast.kind === 'message'
+                            ? toast.text
                             : <>
-                                <span>Achievement unlocked: {toast.title}</span>
-                                {toast.reward && <span className="toast-reward">Unlocked: {toast.reward}</span>}
+                                <BadgeArt src={achievementArt(toast.id)} size={40} />
+                                <div className="toast-text">
+                                    <span>Achievement unlocked: {toast.title}</span>
+                                    {toast.reward && <span className="toast-reward">Unlocked: {toast.reward}</span>}
+                                </div>
                             </>}
                     </div>
                 )}

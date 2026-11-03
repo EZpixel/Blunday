@@ -184,38 +184,6 @@ export function drawCoinBagGlyph(ctx, cx, cy) {
     ctx.restore();
 }
 
-export function drawScoreGlyph(ctx, cx, cy) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    // Trophy cup body
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.roundRect(-7, -10, 14, 12, 3);
-    ctx.fill();
-    // Cup highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath();
-    ctx.roundRect(-5, -8, 5, 5, 2);
-    ctx.fill();
-    // Handles
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(-7, -5, 4, Math.PI * 0.5, Math.PI * 1.5);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(7, -5, 4, -Math.PI * 0.5, Math.PI * 0.5);
-    ctx.stroke();
-    // Stem
-    ctx.fillStyle = '#ffd700';
-    ctx.fillRect(-2, 2, 4, 5);
-    // Base
-    ctx.beginPath();
-    ctx.roundRect(-6, 7, 12, 4, 2);
-    ctx.fill();
-    ctx.restore();
-}
-
 export function drawGoldBarGlyph(ctx, cx, cy) {
     ctx.save();
     ctx.translate(cx, cy);
@@ -321,46 +289,6 @@ export function drawMagnetGlyph(ctx, cx, cy) {
     ctx.restore();
 }
 
-// Snapped wooden plank: two halves with grain lines and a jagged break
-export function drawWoodGlyph(ctx, cx, cy) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    for (const [dir, rot] of [[-1, -0.25], [1, 0.25]]) {
-        ctx.save();
-        ctx.translate(dir * 2, 0);
-        ctx.rotate(rot);
-        ctx.fillStyle = '#b06840';
-        ctx.beginPath();
-        if (dir < 0) {
-            ctx.moveTo(-11, -3);
-            ctx.lineTo(-1, -3);
-            ctx.lineTo(-2.5, -0.5);
-            ctx.lineTo(-0.5, 1);
-            ctx.lineTo(-2, 3);
-            ctx.lineTo(-11, 3);
-        } else {
-            ctx.moveTo(11, -3);
-            ctx.lineTo(1, -3);
-            ctx.lineTo(-0.5, -0.5);
-            ctx.lineTo(1.5, 1);
-            ctx.lineTo(0, 3);
-            ctx.lineTo(11, 3);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#6a3214';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(dir * 3, -1);
-        ctx.lineTo(dir * 10, -1);
-        ctx.moveTo(dir * 4, 1.5);
-        ctx.lineTo(dir * 9, 1.5);
-        ctx.stroke();
-        ctx.restore();
-    }
-    ctx.restore();
-}
-
 export function drawUmbrellaGlyph(ctx, cx, cy) {
     ctx.save();
     ctx.translate(cx, cy);
@@ -393,39 +321,5 @@ export function drawUmbrellaGlyph(ctx, cx, cy) {
     ctx.beginPath();
     ctx.arc(-2, 9, 2, 0, Math.PI, false);
     ctx.stroke();
-    ctx.restore();
-}
-
-export function drawCrownGlyph(ctx, cx, cy) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    // Crown body
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.moveTo(-9, 6);
-    ctx.lineTo(-9, -4);
-    ctx.lineTo(-4, 1);
-    ctx.lineTo(0, -7);
-    ctx.lineTo(4, 1);
-    ctx.lineTo(9, -4);
-    ctx.lineTo(9, 6);
-    ctx.closePath();
-    ctx.fill();
-    // Band
-    ctx.fillStyle = '#e6b800';
-    ctx.fillRect(-9, 4, 18, 3);
-    // Center jewel
-    ctx.fillStyle = '#ff4466';
-    ctx.beginPath();
-    ctx.arc(0, 2, 1.6, 0, Math.PI * 2);
-    ctx.fill();
-    // Side jewels
-    ctx.fillStyle = '#44aaff';
-    ctx.beginPath();
-    ctx.arc(-5, 3, 1.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(5, 3, 1.3, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
 }

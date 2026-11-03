@@ -40,6 +40,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // App-local plugins have to be registered before the bridge starts
+        registerPlugin(PlayGamesPlugin.class);
         super.onCreate(savedInstanceState);
         // Edge to edge on every Android version, the way Android 15+ enforces it:
         // the window draws behind the system bars and the camera cutout (the

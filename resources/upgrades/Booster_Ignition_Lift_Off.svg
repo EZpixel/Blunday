@@ -1,0 +1,26 @@
+<!-- Blunday upgrade icon: "Booster Ignition & Lift Off". 512x512, same badge as the achievement icons
+     (resources/achievements): night-sky ground, ink (#0d1640) ringed disc lit from the
+     top left; everything that matters stays inside the disc. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#ffa86a"/><stop offset="1" stop-color="#8a1a1a"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 256L556 256L548.54 322.46ZM256 256L515.81 406L476.12 459.83ZM256 256L406 515.81L344.71 542.58ZM256 256L256 556L189.54 548.54ZM256 256L106 515.81L52.17 476.12ZM256 256L-3.81 406L-30.58 344.71ZM256 256L-44 256L-36.54 189.54ZM256 256L-3.81 106L35.88 52.17ZM256 256L106 -3.81L167.29 -30.58ZM256 256L256 -44L322.46 -36.54ZM256 256L406 -3.81L459.83 35.88ZM256 256L515.81 106L542.58 167.29Z" fill="#fff" opacity="0.14"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <path d="M170 318C170 370.8 190.8 394.8 196 414C201.2 394.8 222 370.8 222 318Z" fill="#ff7a1a" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M180.4 318C180.4 354.96 192.88 371.76 196 385.2C199.12 371.76 211.6 354.96 211.6 318Z" fill="#ffd24a"/><path d="M188.2 318C188.2 338.06 194.44 347.18 196 354.48C197.56 347.18 203.8 338.06 203.8 318Z" fill="#fff"/><path d="M290 318C290 370.8 310.8 394.8 316 414C321.2 394.8 342 370.8 342 318Z" fill="#ff7a1a" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M300.4 318C300.4 354.96 312.88 371.76 316 385.2C319.12 371.76 331.6 354.96 331.6 318Z" fill="#ffd24a"/><path d="M308.2 318C308.2 338.06 314.44 347.18 316 354.48C317.56 347.18 323.8 338.06 323.8 318Z" fill="#fff"/><g fill="#e8e8f0" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"><circle cx="130" cy="410" r="30"/><circle cx="184" cy="428" r="24"/><circle cx="330" cy="430" r="26"/><circle cx="384" cy="406" r="30"/><circle cx="256" cy="440" r="22"/></g><g transform="translate(196 160) scale(6.4)"><path d="M-6 24V-2Q0 -16 6 -2V24Z" fill="#d23a3a" stroke="#0d1640" stroke-width="0.78" stroke-linejoin="round"/><path d="M-6 15L-11 25V18L-6 10ZM6 15L11 25V18L6 10Z" fill="#a82222" stroke="#0d1640" stroke-width="0.78" stroke-linejoin="round"/><rect x="-6" y="9" width="12" height="3" fill="#ffd24a"/><circle cx="0" cy="2" r="2.6" fill="#aaddff" stroke="#0d1640" stroke-width="0.55"/><rect x="-4" y="-1" width="1.6" height="11" rx="0.8" fill="#fff" opacity="0.35"/></g><g transform="translate(316 160) scale(6.4)"><path d="M-6 24V-2Q0 -16 6 -2V24Z" fill="#d23a3a" stroke="#0d1640" stroke-width="0.78" stroke-linejoin="round"/><path d="M-6 15L-11 25V18L-6 10ZM6 15L11 25V18L6 10Z" fill="#a82222" stroke="#0d1640" stroke-width="0.78" stroke-linejoin="round"/><rect x="-6" y="9" width="12" height="3" fill="#ffd24a"/><circle cx="0" cy="2" r="2.6" fill="#aaddff" stroke="#0d1640" stroke-width="0.55"/><rect x="-4" y="-1" width="1.6" height="11" rx="0.8" fill="#fff" opacity="0.35"/></g><g fill="#fff"><path d="M256 122Q256 140 274 140Q256 140 256 158Q256 140 238 140Q256 140 256 122Z" fill="#fff"/><path d="M120 178Q120 190 132 190Q120 190 120 202Q120 190 108 190Q120 190 120 178Z" fill="#fff"/><path d="M392 188Q392 200 404 200Q392 200 392 212Q392 200 380 200Q392 200 392 188Z" fill="#fff"/></g>
+  </g>
+</svg>

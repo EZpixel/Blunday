@@ -1,0 +1,26 @@
+<!-- Blunday upgrade icon: "Aura Farming". 512x512, same badge as the achievement icons
+     (resources/achievements): night-sky ground, ink (#0d1640) ringed disc lit from the
+     top left; everything that matters stays inside the disc. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#b98af0"/><stop offset="1" stop-color="#3a1478"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    <path d="M256 256L556 256L548.54 322.46ZM256 256L515.81 406L476.12 459.83ZM256 256L406 515.81L344.71 542.58ZM256 256L256 556L189.54 548.54ZM256 256L106 515.81L52.17 476.12ZM256 256L-3.81 406L-30.58 344.71ZM256 256L-44 256L-36.54 189.54ZM256 256L-3.81 106L35.88 52.17ZM256 256L106 -3.81L167.29 -30.58ZM256 256L256 -44L322.46 -36.54ZM256 256L406 -3.81L459.83 35.88ZM256 256L515.81 106L542.58 167.29Z" fill="#fff" opacity="0.14"/><circle cx="256" cy="250" r="130" fill="url(#glow)" opacity="0.8"/>
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <ellipse cx="256" cy="272" rx="150" ry="54" fill="none" stroke="#fff" stroke-opacity="0.6" stroke-width="6" stroke-dasharray="18 14" transform="rotate(-14 256 272)"/><g transform="translate(256 250) rotate(0) scale(3.8) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.63"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#2255bb" stroke="#0d1640" stroke-width="2.63"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-blue)" stroke="#0d1640" stroke-width="2.63"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><path d="M9.2 14.5Q12.5 18.5 15.8 14.5" fill="none" stroke="#334" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M24.2 14.5Q27.5 18.5 30.8 14.5" fill="none" stroke="#334" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.5 23.5Q20 29.5 26.5 23.5" fill="none" stroke="#334" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g><path d="M126 272L133.94 291.08L154.53 292.73L138.84 306.17L143.63 326.27L126 315.5L108.37 326.27L113.16 306.17L97.47 292.73L118.06 291.08Z" fill="#ffdd00" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><g transform="translate(388 218) scale(2.1)"><rect x="-6" y="-12" width="12" height="22" rx="2" fill="#555" stroke="#0d1640" stroke-width="2.38"/><rect x="-15" y="12" width="6" height="4" fill="#666" stroke="#0d1640" stroke-width="2.38"/><rect x="-19" y="-18" width="14" height="32" rx="7" fill="#cc4444" stroke="#0d1640" stroke-width="2.38"/><rect x="-19" y="0" width="14" height="4" fill="#ffd24a"/><circle cx="-12" cy="-9" r="3" fill="#aaddff" stroke="#0d1640" stroke-width="1.67"/><rect x="-16.5" y="-14" width="2.2" height="12" rx="1.1" fill="#fff" opacity="0.35"/><rect x="9" y="12" width="6" height="4" fill="#666" stroke="#0d1640" stroke-width="2.38"/><rect x="5" y="-18" width="14" height="32" rx="7" fill="#cc4444" stroke="#0d1640" stroke-width="2.38"/><rect x="5" y="0" width="14" height="4" fill="#ffd24a"/><circle cx="12" cy="-9" r="3" fill="#aaddff" stroke="#0d1640" stroke-width="1.67"/><rect x="7.5" y="-14" width="2.2" height="12" rx="1.1" fill="#fff" opacity="0.35"/></g><path d="M232 384c-6 -28 4 -52 18 -52h10c10 0 12 10 10 20h18c10 0 14 8 14 16v10c0 6 -4 8 -10 8h-58z" fill="#8844cc" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><rect x="232" y="372" width="72" height="12" fill="#55288a"/><g fill="#fff"><path d="M170 134Q170 150 186 150Q170 150 170 166Q170 150 154 150Q170 150 170 134Z" fill="#fff"/><path d="M350 108Q350 120 362 120Q350 120 350 132Q350 120 338 120Q350 120 350 108Z" fill="#fff"/></g>
+  </g>
+</svg>

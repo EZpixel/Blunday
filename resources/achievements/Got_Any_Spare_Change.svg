@@ -1,0 +1,34 @@
+<!-- Blunday achievement icon: "Got Any Spare Change?". 512x512, full bleed; everything
+     that matters stays inside the central badge circle (r 200, ~80% of the width).
+     Shared look across all 17: night-sky ground, ink (#0d1640) ringed disc lit
+     from the top left, Blunday drawn in the game's own proportions. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0a3c"/><stop offset="1" stop-color="#2a4a7a"/></linearGradient>
+    <radialGradient id="disc" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#a8e0d8"/><stop offset="1" stop-color="#2f6f78"/></radialGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.2" r="0.6"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="body-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#66aaff"/><stop offset="1" stop-color="#2255bb"/></linearGradient>
+    <linearGradient id="body-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#c08a10"/></linearGradient>
+    <linearGradient id="body-grey" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bcc2cc"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+    <linearGradient id="body-green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86e682"/><stop offset="1" stop-color="#2e8a34"/></linearGradient>
+    <linearGradient id="body-orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb057"/><stop offset="1" stop-color="#d0520f"/></linearGradient>
+    <linearGradient id="body-white" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#bfc6d6"/></linearGradient>
+    <clipPath id="discClip"><circle cx="256" cy="256" r="200"/></clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000" flood-opacity="0.35"/></filter>
+    <radialGradient id="glowY"><stop offset="0" stop-color="#fff6a0" stop-opacity="0.9"/><stop offset="1" stop-color="#fff6a0" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowR"><stop offset="0" stop-color="#ff6688" stop-opacity="0.7"/><stop offset="1" stop-color="#ff6688" stop-opacity="0"/></radialGradient>
+    
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <g fill="#fff"><circle cx="40" cy="44" r="10" opacity="0.12"/><circle cx="476" cy="70" r="6" opacity="0.14"/><circle cx="466" cy="462" r="12" opacity="0.08"/><circle cx="34" cy="470" r="6" opacity="0.12"/></g>
+  <circle cx="256" cy="256" r="214" fill="#0d1640"/>
+  <circle cx="256" cy="256" r="200" fill="url(#disc)"/>
+  <g clip-path="url(#discClip)">
+    
+    <circle cx="256" cy="256" r="200" fill="url(#gloss)"/>
+  </g>
+  <circle cx="256" cy="256" r="191" fill="none" stroke="#fff" stroke-width="5" opacity="0.22"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(256 252) rotate(0) scale(4.1) translate(-20 -20)"><rect x="4" y="38" width="10" height="6" rx="1" fill="#c08a10" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="26" y="38" width="10" height="6" rx="1" fill="#c08a10" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="0" y="0" width="40" height="40" rx="6" fill="url(#body-gold)" stroke="#0d1640" stroke-width="2.439024390243903"/><rect x="4" y="2.5" width="26" height="3" rx="1.5" fill="#fff" opacity="0.3"/><rect x="3" y="35" width="34" height="3" rx="1.5" fill="#000" opacity="0.12"/><rect x="7.5" y="10" width="10" height="10" fill="#fff" stroke="#4a3200" stroke-width="0.8"/><rect x="9.5" y="13" width="6" height="6" fill="#111"/><rect x="10.3" y="13.8" width="2" height="2" fill="#fff"/><rect x="22.5" y="10" width="10" height="10" fill="#fff" stroke="#4a3200" stroke-width="0.8"/><rect x="24.5" y="13" width="6" height="6" fill="#111"/><rect x="25.3" y="13.8" width="2" height="2" fill="#fff"/><path d="M8 7L17 4.5" fill="none" stroke="#4a3200" stroke-width="2" stroke-linecap="round"/><path d="M32 7L23 4.5" fill="none" stroke="#4a3200" stroke-width="2" stroke-linecap="round"/><path d="M13 26L15.5 24L18 26L20.5 24L23 26L25.5 24L27 25.5" fill="none" stroke="#4a3200" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><g transform="rotate(-8 33 31)"><rect x="28.5" y="27" width="9" height="8" rx="1" fill="#8f97a3" stroke="#0d1640" stroke-width="1.1"/><rect x="29.8" y="28.3" width="6.4" height="5.4" fill="none" stroke="#eef1f4" stroke-width="0.6" stroke-dasharray="1.2 1"/></g><g transform="translate(5.5 29)"><rect x="-4" y="-1.4" width="8" height="2.8" rx="1" fill="#f0c890" stroke="#0d1640" stroke-width="0.7" transform="rotate(45)"/><rect x="-4" y="-1.4" width="8" height="2.8" rx="1" fill="#f0c890" stroke="#0d1640" stroke-width="0.7" transform="rotate(-45)"/></g></g><g transform="rotate(-8 178 318)"><path d="M152 312H204V368Q204 392 178 392Q152 392 152 368Z" fill="#f4f4f8" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M162 326V366Q162 380 178 380Q194 380 194 366V326" fill="none" stroke="#a8b0bc" stroke-width="3" stroke-dasharray="6 6"/><path d="M152 312H204" stroke="#0d1640" stroke-width="10" stroke-linecap="round"/></g><g transform="rotate(8 334 318)"><path d="M308 312H360V368Q360 392 334 392Q308 392 308 368Z" fill="#f4f4f8" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/><path d="M318 326V366Q318 380 334 380Q350 380 350 366V326" fill="none" stroke="#a8b0bc" stroke-width="3" stroke-dasharray="6 6"/><path d="M308 312H360" stroke="#0d1640" stroke-width="10" stroke-linecap="round"/></g><g><path d="M222 340L229 398Q256 410 283 398L290 340Z" fill="#b8c0cc" stroke="#0d1640" stroke-width="6" stroke-linejoin="round"/><path d="M226 360Q256 368 286 360M228 380Q256 388 284 380" fill="none" stroke="#7c8696" stroke-width="4"/><path d="M268 352Q276 366 266 376" fill="none" stroke="#7c8696" stroke-width="4" stroke-linecap="round"/><path d="M236 350V392" stroke="#fff" stroke-opacity="0.5" stroke-width="6" stroke-linecap="round"/><ellipse cx="256" cy="340" rx="34" ry="10" fill="#3a3f4a" stroke="#0d1640" stroke-width="6"/></g><g fill="#e8eef0" opacity="0.9"><circle cx="150" cy="412" r="7"/><circle cx="130" cy="398" r="5"/><circle cx="168" cy="428" r="4"/><circle cx="362" cy="412" r="6"/></g><path transform="rotate(-20 138 170)" d="M138 152Q151.5 170.9 148.8 179A11.16 11.16 0 0 1 127.2 179Q124.5 170.9 138 152Z" fill="#8fd8ff" stroke="#0d1640" stroke-width="5" stroke-linejoin="round"/>
+  </g>
+</svg>

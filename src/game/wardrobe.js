@@ -1,10 +1,7 @@
 import { ACHIEVEMENTS, isUnlocked as isAchievementUnlocked, subscribeUnlocks } from './achievements.js';
-import { isExperimental, subscribeSettings } from './settings.js';
 
 // Blunday's wardrobe: body colors, accessories (one per slot) and emotes (any
-// number at once). Purely cosmetic, and part of Experimental Mode: with it off
-// the Character screen is hidden and Blunday wears the default look, though
-// unlocks are still earned and kept. Every item needs an unlock source except
+// number at once). Purely cosmetic. Every item needs an unlock source except
 // the defaults (Blunday Blue, each slot's None and the Smile). Achievements are
 // the only source so far, one item each; an item with no source shows as
 // "coming soon". A new source (a shop, say) only has to call grantItem() and
@@ -22,8 +19,8 @@ export const SLOT_LABELS = Object.freeze({ color: 'Colors', hat: 'Hats', hair: '
 export const COLORS = Object.freeze([
     { id: 'blue',   name: 'Blunday Blue',             light: '#66aaff', dark: '#2255bb', ink: '#334' },
     { id: 'red',    name: 'Angry Coin Red',           light: '#ff7a7a', dark: '#b8202e', ink: '#3a1018' },
-    { id: 'gold',   name: 'Gold Digger Gold',         light: '#ffe27a', dark: '#c08a10', ink: '#4a3200', unlock: { achievement: 'gold_bar' }, shiny: true },
-    { id: 'grey',   name: 'Monday Grey',              light: '#bcc2cc', dark: '#5c636e', ink: '#2a2e36', unlock: { achievement: 'no_gold_10000' } },
+    { id: 'gold',   name: 'Gold Digger Gold',         light: '#ffe27a', dark: '#c08a10', ink: '#4a3200', unlock: { achievement: 'no_gold_10000' }, shiny: true },
+    { id: 'grey',   name: 'Monday Grey',              light: '#bcc2cc', dark: '#5c636e', ink: '#2a2e36', unlock: { achievement: 'gold_bar' } },
     { id: 'green',  name: 'Touch Grass Green',        light: '#86e682', dark: '#2e8a34', ink: '#163a18', unlock: { achievement: 'no_power_10000' } },
     { id: 'purple', name: 'Left Is Right Purple',     light: '#cf8dff', dark: '#6a2bb0', ink: '#2a0f4a' },
     { id: 'brown',  name: 'Termite Snack Brown',      light: '#cf9466', dark: '#6e3f1e', ink: '#2e1808' },
@@ -82,7 +79,7 @@ export const ACCESSORIES = Object.freeze({
 });
 
 // Emotes Blunday may use. `reactions` are the ids in emotes.js the item
-// enables (Panic → relief is one item for both halves). Equipped emotes fire
+// enables (Panic is one item for both panic and the relief after). Equipped emotes fire
 // the way they always do: now and then, when their moment comes.
 export const EMOTES = Object.freeze([
     { id: 'smile',     name: 'Smile',                 reactions: ['smile'] },
@@ -90,7 +87,7 @@ export const EMOTES = Object.freeze([
     { id: 'sproing',   name: 'Sproing Face',          reactions: ['sproing'],          unlock: { achievement: 'boots' } },
     { id: 'shocked',   name: 'Shocked Gem Face',      reactions: ['shocked'],          unlock: { achievement: 'red_gem' } },
     { id: 'annoyed',   name: 'Wood You Please Stop?', reactions: ['annoyed'],          unlock: { achievement: 'wood_1000' } },
-    { id: 'panic',     name: 'Panic → Relief',        reactions: ['panic', 'relief'],  unlock: { achievement: 'jetpack_save' } },
+    { id: 'panic',     name: 'Panic',                 reactions: ['panic', 'relief'],  unlock: { achievement: 'jetpack_save' } },
     { id: 'houston',   name: 'Houston Face',          reactions: ['houston'],          unlock: { achievement: 'liftoff' } },
     { id: 'tongue',    name: 'Tongue Out',            reactions: ['tongue'] },
     { id: 'money',     name: 'Money Eyes',            reactions: ['money'] },
@@ -147,18 +144,6 @@ function save() {
 export function subscribeWardrobe(fn) {
     subscribers.add(fn);
     return () => subscribers.delete(fn);
-}
-
-// Turning Experimental Mode on or off changes the look everyone sees
-let wasExperimental = isExperimental();
-subscribeSettings(() => {
-    if (isExperimental() === wasExperimental) return;
-    wasExperimental = isExperimental();
-    for (const fn of subscribers) fn(state.look);
-});
-
-export function isWardrobeEnabled() {
-    return isExperimental();
 }
 
 // ─── Unlocks ────────────────────────────────────────────────────────────────
@@ -259,11 +244,8 @@ export function randomizeLook() {
 }
 
 // The look to show. A saved look can name something that isn't unlocked (e.g.
-// after a progress reset elsewhere); the default shows in its place. With
-// Experimental Mode off it's the default look, unless `always` (the
-// Character screen's own previews).
-export function resolveLook(look = state.look, always = false) {
-    if (!always && !isExperimental()) return DEFAULT_LOOK;
+// after a progress reset elsewhere); the default shows in its place.
+export function resolveLook(look = state.look) {
     const out = {};
     for (const slot of SLOTS) {
         const item = look[slot] ? findItem(slot, look[slot]) : null;

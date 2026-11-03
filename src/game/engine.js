@@ -94,7 +94,7 @@ const LANDING_EFFECT_SOUNDS = ['boots'];
 // Parallax background circles
 const BG_CIRCLE_COUNT = 18;
 
-// Emote triggers (Experimental Mode). Each only gives a chance of a reaction;
+// Emote triggers. Each only gives a chance of a reaction;
 // see emotes.js for the pacing.
 const CLOSE_CALL_LINE   = 0.85;  // landing this far down the screen is a close call
 const PANIC_LINE        = 0.72;  // falling past this far down the screen is scary
@@ -108,7 +108,7 @@ const RICHES_GOLD       = 300;
 const CALM_EMOTE_CHANCE = 1 / 700; // per step, while nothing else is going on
 const GUM_INFLATE       = 1 / 240; // bubble gum grows to full size in 4 s, then pops
 
-// Title screen cameos (Experimental Mode): now and then a big Blunday peeks
+// Title screen cameos: now and then a big Blunday peeks
 // in from a side, behind the menu
 const CAMEO_FIRST_DELAY = [480, 900];
 const CAMEO_DELAY       = [1200, 2700];
@@ -159,7 +159,7 @@ export function createGame(canvas) {
     let runGoldEarned = 0;         // gold banked this run, for the rewarded "2x gold" ad
     let runBonusClaimed = false;
     let runUsedPowerUp = false;
-    let experimental = false;      // Experimental Mode (fart sound, emotes), latched per run
+    let experimental = false;      // Experimental Mode (the fart sound), latched per run
     let controlsInverted = false;  // set by landing on an invert platform
     let flyingGold = [];           // gold pulled off its platform by the magnet: { type, amount, x, y, ox, oy, speed }
     let moveSpeedMultiplier = 1;
@@ -239,6 +239,7 @@ export function createGame(canvas) {
     function snapshotKey() {
         let key = `${gameState}|${score}|${highScore}|${coins}|${gold}|${justSaved}`;
         for (const t in activeEffects) {
+            if (gameState === 'idle') break; // no effect bars on the title screen
             const e = activeEffects[t];
             key += `|${t}:${Math.ceil((e.remaining / e.total) * 200)}`;
         }
@@ -325,7 +326,10 @@ export function createGame(canvas) {
         playSfx(type, effectSoundVariant[type]);
     }
 
+    // The title screen's demo can wear a jetpack too, but the effect bars are
+    // only for runs
     function effectsSnapshot() {
+        if (gameState === 'idle') return [];
         const order = ['booster', 'jetpack', 'boots', 'umbrella', 'star', 'magnet'];
         return order
             .filter(t => activeEffects[t])
@@ -587,7 +591,7 @@ export function createGame(canvas) {
         else if (g.type === 'bar') tryUnlock('gold_bar');
         else if (g.type === 'gem') tryUnlock('red_gem');
         checkRich();
-        if (experimental) reactToGold(g.type, gain);
+        reactToGold(g.type, gain);
     }
 
     // Gems make the jaw drop (purple ones the most); a pile of riches in a short
@@ -797,7 +801,6 @@ export function createGame(canvas) {
         const closeCall = player.y + PLAYER_HEIGHT - cameraY > CANVAS_HEIGHT * CLOSE_CALL_LINE;
         lastLandY = platform.y;
         airDx = 0;
-        if (!experimental) return;
 
         if (justInverted) emotes.trigger('dizzy', { chance: 0.7 });
         else if (platform.broken) emotes.trigger('annoyed', { chance: 0.25 });
@@ -975,7 +978,7 @@ export function createGame(canvas) {
                     activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
                     tryUnlock('jetpack');
-                    if (experimental) emotes.trigger('thrust', { chance: 0.6 });
+                    emotes.trigger('thrust', { chance: 0.6 });
                 } else if (p.powerUp.type === 'boots') {
                     activeEffects.boots = { type: 'boots', remaining: BOOTS_DURATION_FRAMES, total: BOOTS_DURATION_FRAMES };
                     spawnParticles('pickup', player.x + PLAYER_WIDTH / 2, player.y, 8);
@@ -1141,7 +1144,7 @@ export function createGame(canvas) {
 
         updateParticles();
         updateAccessories();
-        if (experimental) updateEmotes();
+        updateEmotes();
 
         // Game over / jetpack save
         if (player.y - cameraY > CANVAS_HEIGHT) {
@@ -1160,7 +1163,7 @@ export function createGame(canvas) {
                 spawnParticles('exhaust', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 12);
                 tryUnlock('jetpack_save');
                 // Panic, then relief: always, this is the moment it exists for
-                if (experimental) emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
+                emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
             } else {
                 gameState = 'gameover';
                 stopAllLoops();
@@ -1191,6 +1194,23 @@ export function createGame(canvas) {
     let demoWrap   = false;  // taking the shortcut through the screen edge
     let demoCoinTimer  = 0;
     let demoDriftTimer = 0;
+
+    // Now and then the autopilot fluffs a hop on purpose: it overshoots into a
+    // gap and drops right out of view in a panic. After a moment of nothing, the
+    // Ctrl+Z Jetpack hauls it back up to the platform it missed: slowly at
+    // first, picking up speed on the way. Much slower than the real save, so
+    // the whole blunder can be enjoyed.
+    const OOPS_CHANCE        = 0.06;        // per landing, once the cooldown is over
+    const OOPS_COOLDOWN      = [900, 1800];    // frames before the next one may happen
+    const OOPS_HIDDEN_Y      = CANVAS_HEIGHT + 12;                  // fully below the bottom edge
+    const OOPS_HIDDEN        = 60;             // frames gone from view (~1s) before the jetpack kicks in
+    const OOPS_CLIMB_ACCEL   = 0.04;           // upward speed gained per frame: a gentle start
+    const OOPS_CLIMB_SPEED   = -5.5;           // top climb speed; the real save climbs at JETPACK_MAX_SPEED (-14)
+    const OOPS_CLEARANCE     = 8;              // how far above the platform the jetpack cuts out (it coasts on from there)
+    const OOPS_MAX_CLIMB     = 360;            // frames, in case the platform keeps sliding away
+    // phase: 'miss' (heading for the gap) → 'hidden' → 'climb'; null when not happening
+    let oops = null;           // { phase, gapX, frame, platform }
+    let oopsCooldown = 0;
 
     // A platform placed somewhere in its lane (minX..maxX for its left edge),
     // which is also where it may later drift to
@@ -1224,6 +1244,9 @@ export function createGame(canvas) {
         demoWrap       = false;
         demoCoinTimer  = 30;
         demoDriftTimer = randInt(...DEMO_DRIFT_DELAY);
+        oops           = null;
+        oopsCooldown   = randInt(...OOPS_COOLDOWN) / 2; // never right as the menu opens
+        delete activeEffects.jetpack;
         cameraY = prevCameraY = 0;
         // Start with a couple of coins out
         for (let i = 0; i < 2; i++) spawnDemoCoin();
@@ -1281,34 +1304,95 @@ export function createGame(canvas) {
         return next;
     }
 
-    function updateDemo() {
-        moveMovingPlatforms();
-        updateGaze();
-        updateParticles();
-        updateAccessories();
-        // Follows the setting live, so toggling it on the title screen shows at once
-        experimental = isExperimental();
-        if (experimental) {
-            if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) emotes.trigger('smile');
-            emotes.update();
+    // Left edge of a clear column next to the platform about to be missed,
+    // where nothing below would catch the fall (null when there's none in reach)
+    function oopsGap(from, target) {
+        const clear = x => platforms.every(p => p.x > x + PLAYER_WIDTH + 6 || p.x + p.width < x - 6);
+        const reach = demoReach(from, target) + target.width / 2;
+        const middle = target.x + target.width / 2;
+        let best = null;
+        for (let x = 0; x <= CANVAS_WIDTH - PLAYER_WIDTH; x += 4) {
+            const cx = x + PLAYER_WIDTH / 2;
+            if (!clear(x) || Math.abs(cx - (player.x + PLAYER_WIDTH / 2)) > reach) continue;
+            if (best === null || Math.abs(cx - middle) < Math.abs(best + PLAYER_WIDTH / 2 - middle)) best = x;
         }
-        updateCameo();
+        return best;
+    }
 
-        // Platforms glide to their new spot when one has been given a drift
-        for (const p of platforms) {
-            if (p.driftTo === undefined) continue;
-            p.x += (p.driftTo - p.x) * 0.03;
-            if (Math.abs(p.driftTo - p.x) < 0.5) { p.x = p.driftTo; delete p.driftTo; }
-        }
-        if (--demoDriftTimer <= 0) {
-            demoDriftTimer = randInt(...DEMO_DRIFT_DELAY);
-            const still = platforms.filter((p, i) => i > 0 && p.type === 'static' && p !== demoTarget);
-            if (still.length) {
-                const p = still[randInt(0, still.length - 1)];
-                p.driftTo = randInt(p.minX, p.maxX);
+    // On a landing: maybe this hop is the one that goes wrong
+    function maybeStartOops(from) {
+        if (oopsCooldown > 0 || demoTarget === from || Math.random() >= OOPS_CHANCE) return;
+        const gapX = oopsGap(from, demoTarget);
+        if (gapX === null) return;
+        oops = { phase: 'miss', gapX, frame: 0, platform: demoTarget, panicked: false };
+    }
+
+    // One step of the blunder; returns true while it's in charge of the player
+    function updateOops() {
+        if (!oops) return false;
+        const o = oops;
+        o.frame++;
+        const px = player.x + PLAYER_WIDTH / 2;
+
+        if (o.phase === 'miss') {
+            // Sails right past the platform and keeps going for the gap
+            const delta = o.gapX - player.x;
+            player.x += Math.sign(delta) * Math.min(Math.abs(delta), DEMO_STEP);
+            player.velocityY += GRAVITY;
+            player.y += player.velocityY;
+            if (!o.panicked && player.velocityY > 0 && player.y + PLAYER_HEIGHT > o.platform.y) {
+                o.panicked = true;
+                emotes.trigger('panic', { priority: 6, force: true, dur: 90 });
             }
+            if (player.y > OOPS_HIDDEN_Y) {
+                // Gone: completely below the bottom edge
+                player.y = OOPS_HIDDEN_Y;
+                player.velocityY = 0;
+                o.phase = 'hidden';
+                o.frame = 0;
+            }
+            return true;
         }
 
+        if (o.phase === 'hidden') {
+            // A moment of silence...
+            if (o.frame >= OOPS_HIDDEN) {
+                o.phase = 'climb';
+                o.frame = 0;
+                player.velocityY = 0;
+                activeEffects.jetpack = { type: 'jetpack', remaining: 1e9, total: 1e9 };
+            }
+            return true;
+        }
+
+        // Climb: one smooth haul up that starts slow and keeps speeding up,
+        // drifting over to the platform on the way
+        const p = o.platform;
+        player.velocityY = Math.max(player.velocityY - OOPS_CLIMB_ACCEL, OOPS_CLIMB_SPEED);
+        player.y += player.velocityY;
+        const delta = p.x + p.width / 2 - px;
+        player.x += Math.sign(delta) * Math.min(Math.abs(delta), DEMO_STEP * 0.45);
+        // Exhaust shows at the bottom edge even before the player comes into view
+        if (Math.random() < 0.6) spawnParticles('exhaust', px, Math.min(player.y + PLAYER_HEIGHT, CANVAS_HEIGHT - 2), 2);
+
+        const over = player.x + PLAYER_WIDTH > p.x + 6 && player.x < p.x + p.width - 6;
+        if ((over && player.y + PLAYER_HEIGHT < p.y - OOPS_CLEARANCE) || o.frame > OOPS_MAX_CLIMB) {
+            // Out of fuel right on time: drops onto the platform, very relieved
+            delete activeEffects.jetpack;
+            // Coasts up a little on what's left of the climb, no sudden stop
+            player.velocityY *= 0.6;
+            emotes.trigger('relief', { priority: 7, force: true, dur: 120 });
+            demoTarget = p;
+            demoAimX = 0;
+            demoWrap = false;
+            oops = null;
+            oopsCooldown = randInt(...OOPS_COOLDOWN);
+        }
+        return true;
+    }
+
+    // The autopilot's normal hopping: steering, gravity and landings
+    function moveDemoPlayer() {
         // Fell past the target (it moved, or the hop came up short): save it
         // by heading for the nearest platform still below
         if (player.velocityY > 0 && player.y + PLAYER_HEIGHT > demoTarget.y) {
@@ -1343,10 +1427,39 @@ export function createGame(canvas) {
                     player.y = p.y - PLAYER_HEIGHT;
                     player.velocityY = DEMO_BOUNCE_VELOCITY;
                     demoTarget = pickDemoTarget(p);
+                    maybeStartOops(p);
                     break;
                 }
             }
         }
+    }
+
+    function updateDemo() {
+        moveMovingPlatforms();
+        updateGaze();
+        updateParticles();
+        updateAccessories();
+        if (emotes.calm && Math.random() < CALM_EMOTE_CHANCE) emotes.trigger('smile');
+        emotes.update();
+        updateCameo();
+
+        // Platforms glide to their new spot when one has been given a drift
+        for (const p of platforms) {
+            if (p.driftTo === undefined) continue;
+            p.x += (p.driftTo - p.x) * 0.03;
+            if (Math.abs(p.driftTo - p.x) < 0.5) { p.x = p.driftTo; delete p.driftTo; }
+        }
+        if (!oops && --demoDriftTimer <= 0) { // the gap stays a gap while it's being used
+            demoDriftTimer = randInt(...DEMO_DRIFT_DELAY);
+            const still = platforms.filter((p, i) => i > 0 && p.type === 'static' && p !== demoTarget);
+            if (still.length) {
+                const p = still[randInt(0, still.length - 1)];
+                p.driftTo = randInt(p.minX, p.maxX);
+            }
+        }
+
+        if (oopsCooldown > 0) oopsCooldown--;
+        if (!updateOops()) moveDemoPlayer();
 
         // Gold: grabbed silently with a sparkle, and new pieces keep popping up
         for (const p of platforms) {
@@ -1366,7 +1479,7 @@ export function createGame(canvas) {
         }
 
         // Missed somehow: start over with a fresh layout
-        if (player.y > CANVAS_HEIGHT) enterDemo();
+        if (!oops && player.y > CANVAS_HEIGHT) enterDemo();
     }
 
     // ─── Title screen cameos ──────────────────────────────────────────────────
@@ -1382,7 +1495,7 @@ export function createGame(canvas) {
     ];
 
     function updateCameo() {
-        if (!titleCameos || !experimental) {
+        if (!titleCameos) {
             cameo = null;
             return;
         }
@@ -2026,13 +2139,13 @@ export function createGame(canvas) {
             ctx.fillRect(px + PLAYER_WIDTH - 16, drawY + drawH, 14, 5);
         }
 
-        // The cube itself, in the look picked on the Character screen. Emotes
-        // only show in Experimental Mode. A star adds a pulsing gold outline.
+        // The cube itself, in the look picked on the Character screen. A star
+        // adds a pulsing gold outline.
         drawBlunday(ctx, px, drawY, drawH, {
             look,
             gaze,
-            emote:   experimental ? emotes.current : null,
-            blink:   experimental && emotes.blinking,
+            emote:   emotes.current,
+            blink:   emotes.blinking,
             now,
             spin:    propSpin,
             gum,
