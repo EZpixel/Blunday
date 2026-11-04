@@ -98,8 +98,8 @@ public class MainActivity extends BridgeActivity {
             window.setAttributes(attributes);
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // No scrim behind the bars when they show over the game
-            window.setStatusBarContrastEnforced(false);
+            // No scrim behind the navigation bar when it shows over the game
+            // (the status bar never gets one unless asked for)
             window.setNavigationBarContrastEnforced(false);
         }
         // Light icons for whenever the bars show over the dark game
