@@ -23,6 +23,8 @@ const OFFER_EVERY_RUNS = [5, 5];
 const MIN_OFFER_GOLD   = 25;
 const MAX_OFFER_GOLD   = 5000; // doubling bigger hauls than this is too generous
 const STORAGE_KEY      = 'blundayAdOffer';
+// The ad revive is only offered once a run has scored more than this
+const MIN_REVIVE_SCORE = 10000;
 
 let ready   = false; // SDK initialized and consent allows ads
 let loaded  = false; // a rewarded ad is loaded and waiting
@@ -74,10 +76,15 @@ export function shouldOfferDouble(runGold) {
 
 // Asked by the engine when a fall would end the run (and the run's one
 // revive hasn't been used): whether to pause and offer a Ctrl+Z Jetpack
-// revive for watching an ad. Like the 2x offer, only with an ad already
-// loaded, so the button never leads to "no ad available".
-export function canOfferRevive() {
+// revive for watching an ad. Only for runs that scored more than
+// MIN_REVIVE_SCORE, and like the 2x offer, only with an ad already loaded,
+// so the button never leads to "no ad available".
+export function canOfferRevive(score) {
     if (!adsSupported) return false;
+    if (score <= MIN_REVIVE_SCORE) {
+        log(`no revive offer: score ${score}, needs more than ${MIN_REVIVE_SCORE}`);
+        return false;
+    }
     if (!ready || !loaded) {
         log(`no revive offer: ads ready: ${ready}, ad loaded: ${loaded}`);
         preload();

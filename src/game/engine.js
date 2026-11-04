@@ -1162,7 +1162,7 @@ export function createGame(canvas) {
                 stopAllLoops();
                 playSfx(experimental ? 'fart' : 'fall');
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
-                if (!adReviveUsed && canOfferRevive()) {
+                if (!adReviveUsed && canOfferRevive(score)) {
                     adReviveUsed = true;
                     gameState = 'revive';
                 } else {
