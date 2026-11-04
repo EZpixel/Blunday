@@ -27,7 +27,13 @@ function DoubleGoldOffer({ offer }) {
     );
 }
 
-export default function GameOverOverlay({ score, highScore, onRestart, onMenu, onUpgrades, offer }) {
+// Why an ad revive the player went for didn't happen
+const REVIVE_NOTES = {
+    closed: 'Ad closed early, so no revive this time.',
+    failed: 'No ad available right now, so no revive this time.',
+};
+
+export default function GameOverOverlay({ score, highScore, onRestart, onMenu, onUpgrades, offer, reviveNote }) {
     return (
         <div className="overlay gameover-overlay">
             <div className="overlay-header">
@@ -35,6 +41,7 @@ export default function GameOverOverlay({ score, highScore, onRestart, onMenu, o
                 <p className="score-lines">
                     Score: {score} &nbsp;|&nbsp; Best: {highScore}
                 </p>
+                {reviveNote && <p className="reward-result failed">{REVIVE_NOTES[reviveNote]}</p>}
                 <DoubleGoldOffer offer={offer} />
             </div>
             <div className="menu-buttons">

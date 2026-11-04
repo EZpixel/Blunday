@@ -1,12 +1,13 @@
 import { Capacitor } from '@capacitor/core';
 import { AdMob, AdmobConsentStatus, RewardAdPluginEvents } from '@capacitor-community/admob';
 
-// Rewarded "2x gold" ads, in the Android app only. The web build (desktop or
+// Rewarded ads ("2x gold" at game over, and the Ctrl+Z Jetpack revive), in
+// the Android app only. The web build (desktop or
 // mobile browser) never shows ads: Capacitor reports a native platform only
 // when the game runs inside the installed app.
 export const adsSupported = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
-// The "2x gold" rewarded ad unit in AdMob. (The app ID lives in
+// The rewarded ad unit in AdMob (used for both offers). (The app ID lives in
 // android/app/src/main/res/values/strings.xml.)
 // USE_TEST_ADS swaps in Google's always-available test ad instead, for
 // development; your own phone should be registered as a test device in AdMob
@@ -14,11 +15,13 @@ export const adsSupported = Capacitor.isNativePlatform() && Capacitor.getPlatfor
 const REWARDED_AD_ID = 'ca-app-pub-4815546289908139/2408906957';
 const USE_TEST_ADS   = false;
 
-// How often the offer comes up: after a random number of runs in this range,
-// on the first of them that earned at least MIN_OFFER_GOLD. [1, 1] offers it
-// after every run that earns enough; e.g. [5, 10] would space it out.
-const OFFER_EVERY_RUNS = [1, 1];
+// How often the "2x gold" offer comes up: after a random number of runs in
+// this range, on the first of them that earned between MIN_OFFER_GOLD and
+// MAX_OFFER_GOLD. [5, 5] offers it every 5th run; a run that earns too little
+// or too much keeps it waiting for the next run that qualifies.
+const OFFER_EVERY_RUNS = [5, 5];
 const MIN_OFFER_GOLD   = 25;
+const MAX_OFFER_GOLD   = 5000; // doubling bigger hauls than this is too generous
 const STORAGE_KEY      = 'blundayAdOffer';
 
 let ready   = false; // SDK initialized and consent allows ads
@@ -57,8 +60,8 @@ function saveRunsUntilOffer(n) {
 export function shouldOfferDouble(runGold) {
     if (!adsSupported) return false;
     const left = Math.max(runsUntilOffer() - 1, 0);
-    if (left > 0 || runGold < MIN_OFFER_GOLD || !ready || !loaded) {
-        log(`no offer: ${left} run(s) to go, ${runGold}/${MIN_OFFER_GOLD} gold, ads ready: ${ready}, ad loaded: ${loaded}`);
+    if (left > 0 || runGold < MIN_OFFER_GOLD || runGold > MAX_OFFER_GOLD || !ready || !loaded) {
+        log(`no offer: ${left} run(s) to go, ${runGold} gold (needs ${MIN_OFFER_GOLD}–${MAX_OFFER_GOLD}), ads ready: ${ready}, ad loaded: ${loaded}`);
         saveRunsUntilOffer(left); // stays at 0 until a run earns enough
         preload(); // try again for next time
         return false;
@@ -66,6 +69,21 @@ export function shouldOfferDouble(runGold) {
     log(`offering 2x for ${runGold} gold`);
     saveRunsUntilOffer(randInt(...OFFER_EVERY_RUNS));
     preload();
+    return true;
+}
+
+// Asked by the engine when a fall would end the run (and the run's one
+// revive hasn't been used): whether to pause and offer a Ctrl+Z Jetpack
+// revive for watching an ad. Like the 2x offer, only with an ad already
+// loaded, so the button never leads to "no ad available".
+export function canOfferRevive() {
+    if (!adsSupported) return false;
+    if (!ready || !loaded) {
+        log(`no revive offer: ads ready: ${ready}, ad loaded: ${loaded}`);
+        preload();
+        return false;
+    }
+    log('offering an ad revive');
     return true;
 }
 

@@ -5,6 +5,7 @@ import ScoreHUD from './ScoreHUD.jsx';
 import EffectBar from './EffectBar.jsx';
 import StartOverlay from './StartOverlay.jsx';
 import GameOverOverlay from './GameOverOverlay.jsx';
+import ReviveOverlay from './ReviveOverlay.jsx';
 import AchievementsView from './AchievementsView.jsx';
 import UpgradesView from './UpgradesView.jsx';
 import SettingsView from './SettingsView.jsx';
@@ -73,6 +74,11 @@ export default function App() {
     // Rewarded "2x gold" offer for the current game over: null, or
     // { state: 'offer' | 'watching' | 'done' | 'failed', amount }
     const [adOffer, setAdOffer] = useState(null);
+    // Ad revive offer while the run waits in the 'revive' state: true while
+    // the ad is loading or showing. reviveNote explains a revive that didn't
+    // happen on the game over screen: null, 'closed' or 'failed'.
+    const [reviveWatching, setReviveWatching] = useState(false);
+    const [reviveNote, setReviveNote] = useState(null);
     // Start time of a first-ever run (no high score yet); drives the move hint
     const [moveHintRun, setMoveHintRun] = useState(null);
 
@@ -198,7 +204,7 @@ export default function App() {
             if (e.code === 'Space') {
                 e.preventDefault();
                 const state = engine.getSnapshot().gameState;
-                if (state !== 'running' && viewRef.current === 'menu') {
+                if (state !== 'running' && state !== 'revive' && viewRef.current === 'menu') {
                     handleStart();
                 }
             }
@@ -345,6 +351,26 @@ export default function App() {
         setAdOffer(o => (o ? { ...o, state } : o));
     }
 
+    // ── Ad revive — the run is paused on a fatal fall, waiting for an answer ──
+    useEffect(() => {
+        if (snapshot.gameState === 'running') setReviveNote(null);
+        if (snapshot.gameState !== 'revive') setReviveWatching(false);
+    }, [snapshot.gameState]);
+
+    async function handleReviveWatch() {
+        setReviveWatching(true);
+        const result = await showRewardedAd(); // 'rewarded' | 'closed' | 'unavailable'
+        const engine = engineRef.current;
+        if (!engine) return;
+        if (result === 'rewarded' && engine.reviveWithJetpack()) return;
+        setReviveNote(result === 'closed' ? 'closed' : 'failed');
+        engine.declineRevive();
+    }
+
+    function handleReviveDecline() {
+        engineRef.current?.declineRevive();
+    }
+
     const { gameState, score, highScore, activeEffects, gold } = snapshot;
 
     // Screens that open over both the title and the game over screen
@@ -380,6 +406,14 @@ export default function App() {
                                 : <StartOverlay onPlay={handleStart} onAchievements={() => setView('achievements')} onUpgrades={() => setView('upgrades')} />
                     )
                 )}
+                {gameState === 'revive' && (
+                    <ReviveOverlay
+                        score={score}
+                        watching={reviveWatching}
+                        onWatch={handleReviveWatch}
+                        onDecline={handleReviveDecline}
+                    />
+                )}
                 {gameState === 'gameover' && (
                     sharedView ?? (
                         <GameOverOverlay
@@ -389,6 +423,7 @@ export default function App() {
                             onUpgrades={handleGameOverUpgrades}
                             onMenu={handleMainMenu}
                             offer={adOffer && { ...adOffer, onWatch: handleWatchAd }}
+                            reviveNote={reviveNote}
                         />
                     )
                 )}
