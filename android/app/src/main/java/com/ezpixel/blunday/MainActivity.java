@@ -6,14 +6,13 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.Display;
-import androidx.activity.EdgeToEdge;
-import androidx.activity.SystemBarStyle;
+import android.view.Window;
+import android.view.WindowManager;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -43,21 +42,11 @@ public class MainActivity extends BridgeActivity {
         // App-local plugins have to be registered before the bridge starts
         registerPlugin(PlayGamesPlugin.class);
         super.onCreate(savedInstanceState);
-        // Edge to edge on every Android version, the way Android 15+ enforces it:
-        // the window draws behind the system bars and the camera cutout (the
-        // cutout mode is set too), and the web layer keeps its UI clear of them
-        // with the insets Capacitor's SystemBars plugin passes in as CSS
-        // variables (see App.jsx and src/index.css). Light icons for whenever the
-        // bars show over the dark game.
         // Called after super.onCreate(), which swaps the splash theme for the app
-        // theme: enabling it earlier creates the window decor while the splash
+        // theme: doing it earlier creates the window decor while the splash
         // theme is active, and its splash background then stays visible behind
         // the status bar area.
-        EdgeToEdge.enable(
-            this,
-            SystemBarStyle.dark(Color.TRANSPARENT),
-            SystemBarStyle.dark(Color.TRANSPARENT)
-        );
+        enableEdgeToEdge();
         applyOrientationPolicy(getResources().getConfiguration());
         hideSystemBars();
         startDisplayDiagnostics();
@@ -86,6 +75,38 @@ public class MainActivity extends BridgeActivity {
             hideSystemBars();
             logDisplayState("focus");
         }
+    }
+
+    // Edge to edge on every Android version, the way Android 15+ enforces it:
+    // the window draws behind the system bars and the camera cutout, and the
+    // web layer keeps its UI clear of them with the insets Capacitor's
+    // SystemBars plugin passes in as CSS variables (see App.jsx and
+    // src/index.css).
+    // Not androidx's EdgeToEdge.enable(): its code for older Android versions
+    // calls Window.setStatusBarColor / setNavigationBarColor and sets
+    // LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES, all deprecated in Android 15,
+    // and Play Console flags the app for them. Here the bars are made
+    // transparent by the theme (values/styles.xml), and only APIs that are
+    // not deprecated are used. Android 9 and 10 keep the default cutout mode,
+    // which leaves a black band beside the cutout while the bars are hidden.
+    private void enableEdgeToEdge() {
+        Window window = getWindow();
+        WindowCompat.setDecorFitsSystemWindows(window, false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowManager.LayoutParams attributes = window.getAttributes();
+            attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            window.setAttributes(attributes);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // No scrim behind the bars when they show over the game
+            window.setStatusBarContrastEnforced(false);
+            window.setNavigationBarContrastEnforced(false);
+        }
+        // Light icons for whenever the bars show over the dark game
+        WindowInsetsControllerCompat controller =
+            WindowCompat.getInsetsController(window, window.getDecorView());
+        controller.setAppearanceLightStatusBars(false);
+        controller.setAppearanceLightNavigationBars(false);
     }
 
     // Phones stay in portrait, the way the game is laid out. Large screens are
