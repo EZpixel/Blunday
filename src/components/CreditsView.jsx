@@ -5,6 +5,7 @@ import SocialLinks from './SocialLinks.jsx';
 const GITHUB_URL     = 'https://github.com/Elijuszek';
 const BUSINESS_EMAIL = 'ezpixelinteractive@gmail.com';
 const PRIVACY_URL    = 'https://ezpixel.github.io/Blunday/privacy.html';
+const TERMS_URL      = 'https://ezpixel.github.io/Blunday/terms.html';
 
 function ExternalLink({ href, children }) {
     return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
@@ -40,7 +41,7 @@ export default function CreditsView({ onBack }) {
 
                 <p className="credits-thanks">Thanks for playing!</p>
                 <p className="credits-small">
-                    v{version} · <ExternalLink href={PRIVACY_URL}>Privacy Policy</ExternalLink>
+                    v{version} · <ExternalLink href={PRIVACY_URL}>Privacy Policy</ExternalLink> · <ExternalLink href={TERMS_URL}>Terms of Service</ExternalLink>
                 </p>
                 <SocialLinks />
             </div>
