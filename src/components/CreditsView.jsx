@@ -1,5 +1,6 @@
 import { version } from '../../package.json';
 import BackButton from './BackButton.jsx';
+import SocialLinks from './SocialLinks.jsx';
 
 const GITHUB_URL     = 'https://github.com/Elijuszek';
 const BUSINESS_EMAIL = 'ezpixelinteractive@gmail.com';
@@ -41,6 +42,7 @@ export default function CreditsView({ onBack }) {
                 <p className="credits-small">
                     v{version} · <ExternalLink href={PRIVACY_URL}>Privacy Policy</ExternalLink>
                 </p>
+                <SocialLinks />
             </div>
             <BackButton onClick={onBack} />
         </div>

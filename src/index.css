@@ -963,6 +963,27 @@ body {
 /* Bottom middle: the corners belong to the Character and Settings buttons */
 .version-label { position: absolute; bottom: calc(6px + var(--safe-bottom, 0px)); left: 50%; transform: translateX(-50%); font-size: 11px; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.5px; pointer-events: none; }
 
+/* GitHub / Discord / email icons at the bottom of the credits: solid white
+   with the game's dark drop outline */
+.social-links {
+    display: flex;
+    gap: 22px;
+    pointer-events: auto;
+}
+
+/* .overlay prefix: outranks the light-blue .credits-overlay a link style */
+.overlay .social-links a {
+    display: flex;
+    padding: 6px;   /* a bigger tap target than the icon itself */
+    color: #fff;
+    text-decoration: none;
+    filter: drop-shadow(0 2px 0 var(--ink));
+    transition: transform 0.05s;
+}
+
+.overlay .social-links a:hover { transform: scale(1.08); }
+.overlay .social-links a:active { transform: translateY(2px); }
+
 /* Character button: bottom-left, mirroring the settings gear */
 .character-button {
     position: absolute;
