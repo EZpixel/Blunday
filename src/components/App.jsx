@@ -340,7 +340,8 @@ export default function App() {
             return;
         }
         const runGold = snapshot.runGold || 0;
-        if (shouldOfferDouble(runGold)) setAdOffer({ state: 'offer', amount: runGold });
+        // A run that was offered the ad revive never also gets the 2x offer
+        if (shouldOfferDouble(runGold, snapshot.adReviveOffered)) setAdOffer({ state: 'offer', amount: runGold });
     }, [snapshot.gameState]); // only when the state changes, not on every snapshot
 
     async function handleWatchAd() {

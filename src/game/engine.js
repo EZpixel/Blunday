@@ -229,6 +229,7 @@ export function createGame(canvas) {
             gold,
             justSaved,
             runGold: runGoldEarned,
+            adReviveOffered: adReviveUsed, // the 2x gold offer is skipped for this run
         };
         lastEmitKey = snapshotKey();
         for (const fn of subscribers) fn(snap);

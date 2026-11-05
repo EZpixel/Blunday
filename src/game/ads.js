@@ -58,12 +58,14 @@ function saveRunsUntilOffer(n) {
 // Called once per finished run. Returns true when this game over should offer
 // to double the run's gold. It's only offered with an ad already loaded, so
 // the button never leads to "no ad available". Once offered, the countdown
-// starts over whether or not the player watches.
-export function shouldOfferDouble(runGold) {
+// starts over whether or not the player watches. A run that was offered the
+// ad revive (watched or declined) never gets the 2x offer too: the run still
+// counts toward the countdown, and a due offer waits for the next run.
+export function shouldOfferDouble(runGold, reviveOffered = false) {
     if (!adsSupported) return false;
     const left = Math.max(runsUntilOffer() - 1, 0);
-    if (left > 0 || runGold < MIN_OFFER_GOLD || runGold > MAX_OFFER_GOLD || !ready || !loaded) {
-        log(`no offer: ${left} run(s) to go, ${runGold} gold (needs ${MIN_OFFER_GOLD}–${MAX_OFFER_GOLD}), ads ready: ${ready}, ad loaded: ${loaded}`);
+    if (left > 0 || reviveOffered || runGold < MIN_OFFER_GOLD || runGold > MAX_OFFER_GOLD || !ready || !loaded) {
+        log(`no offer: ${left} run(s) to go, revive offered: ${reviveOffered}, ${runGold} gold (needs ${MIN_OFFER_GOLD}–${MAX_OFFER_GOLD}), ads ready: ${ready}, ad loaded: ${loaded}`);
         saveRunsUntilOffer(left); // stays at 0 until a run earns enough
         preload(); // try again for next time
         return false;
