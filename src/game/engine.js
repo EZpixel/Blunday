@@ -4,6 +4,7 @@ import { incrementStat } from './stats.js';
 import { getMoveSpeedMultiplier, getPowerUpFreqMultiplier, getJetpackFuelMultiplier, getHigherJumpMultiplier, getBreakableGripLevel, hasBackupJetpack, hasBoosterLiftOff, getLuckCoinBonus, getStarGoldMultiplier, getUmbrellaFallReduction, areAllUpgradesMaxed } from './upgrades.js';
 import { playSfx, pickVariant, setLoop, stopAllLoops } from './audio.js';
 import { isExperimental } from './settings.js';
+import { canOfferRevive } from './ads.js';
 import { createSpaceBackground } from './background.js';
 import { resolveLook, subscribeWardrobe, allowsReaction } from './wardrobe.js';
 import { drawBlunday, hatHeight, BODY_W } from './blunday.js';
@@ -170,6 +171,7 @@ export function createGame(canvas) {
     let bootsBounceVelocity = BOOTS_BOUNCE_VELOCITY;
     let breakableExtraLandings = 0;
     let backupJetpackArmed = false;
+    let adReviveUsed = false;      // the run's one revive-for-an-ad (offered or not, once per run)
     let justSaved = false;
     let shake = 0; // screen shake amplitude in logical units
     let flash = 0; // full-screen white flash, 0..1
@@ -227,6 +229,7 @@ export function createGame(canvas) {
             gold,
             justSaved,
             runGold: runGoldEarned,
+            adReviveOffered: adReviveUsed, // the 2x gold offer is skipped for this run
         };
         lastEmitKey = snapshotKey();
         for (const fn of subscribers) fn(snap);
@@ -650,6 +653,7 @@ export function createGame(canvas) {
         cameo                     = null;
         flyingGold                = [];
         backupJetpackArmed        = hasBackupJetpack();
+        adReviveUsed              = false;
         moveSpeedMultiplier       = getMoveSpeedMultiplier();
         jetpackDurationMultiplier = getJetpackFuelMultiplier();
         starGoldMultiplier        = getStarGoldMultiplier();
@@ -1146,31 +1150,43 @@ export function createGame(canvas) {
         updateAccessories();
         updateEmotes();
 
-        // Game over / jetpack save
+        // Game over / jetpack save. The purchased Ctrl+Z Jetpack goes first;
+        // after it (or without it) the run can be saved once more by watching
+        // an ad, offered while the game waits in the 'revive' state.
         if (player.y - cameraY > CANVAS_HEIGHT) {
             if (backupJetpackArmed) {
                 backupJetpackArmed = false;
                 justSaved = true;
-                runUsedPowerUp = true;
-                clearExclusiveEffects(); // jetpack outranks boots/umbrella
-                const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
-                activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
-                player.velocityY = JETPACK_MAX_SPEED;
-                // A fast fall can overshoot the bottom edge by more than the
-                // jetpack climbs in one step, which would end the run right
-                // after the save; start the climb from the edge instead
-                player.y = Math.min(player.y, cameraY + CANVAS_HEIGHT);
-                spawnParticles('exhaust', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 12);
+                jetpackSave();
                 tryUnlock('jetpack_save');
-                // Panic, then relief: always, this is the moment it exists for
-                emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
             } else {
-                gameState = 'gameover';
                 stopAllLoops();
                 playSfx(experimental ? 'fart' : 'fall');
                 try { localStorage.setItem('blundayHighScore', String(highScore)); } catch (_) {}
+                if (!adReviveUsed && canOfferRevive(score)) {
+                    adReviveUsed = true;
+                    gameState = 'revive';
+                } else {
+                    gameState = 'gameover';
+                }
             }
         }
+    }
+
+    // The emergency jetpack kicks in at the bottom edge and climbs back up
+    function jetpackSave() {
+        runUsedPowerUp = true;
+        clearExclusiveEffects(); // jetpack outranks boots/umbrella
+        const dur = Math.round(JETPACK_DURATION_FRAMES * jetpackDurationMultiplier);
+        activeEffects.jetpack = { type: 'jetpack', remaining: dur, total: dur };
+        player.velocityY = JETPACK_MAX_SPEED;
+        // A fast fall can overshoot the bottom edge by more than the
+        // jetpack climbs in one step, which would end the run right
+        // after the save; start the climb from the edge instead
+        player.y = Math.min(player.y, cameraY + CANVAS_HEIGHT);
+        spawnParticles('exhaust', player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT, 12);
+        // Panic, then relief: always, this is the moment it exists for
+        emotes.trigger('relief', { priority: 6, force: true, dur: 120 });
     }
 
     // ─── Main menu demo ───────────────────────────────────────────────────────
@@ -2316,6 +2332,23 @@ export function createGame(canvas) {
         cameoTimer = randInt(...CAMEO_FIRST_DELAY);
     }
 
+    // Revive offer answered: the ad was watched through (the run goes on with
+    // the Ctrl+Z Jetpack), or it was declined / closed early (game over)
+    function reviveWithJetpack() {
+        if (gameState !== 'revive') return false;
+        dragTargetX = null; // a finger may have lifted while the ad was up
+        jetpackSave();
+        gameState = 'running';
+        emit();
+        return true;
+    }
+
+    function declineRevive() {
+        if (gameState !== 'revive') return;
+        gameState = 'gameover';
+        emit();
+    }
+
     // Rewarded ad watched at game over: bank this run's gold a second time (once)
     function claimRunGoldBonus() {
         if (gameState !== 'gameover' || runBonusClaimed || runGoldEarned <= 0) return 0;
@@ -2367,5 +2400,5 @@ export function createGame(canvas) {
     // The title screen opens on the hopping demo (reset() replaces it when a run starts)
     enterDemo();
 
-    return { start, startLoop, stop, reset, toMenu, setTitleCameos, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot, claimRunGoldBonus };
+    return { start, startLoop, stop, reset, toMenu, setTitleCameos, setInput, setDragTargetFromClient, clearDragTarget, subscribe, getSnapshot, claimRunGoldBonus, reviveWithJetpack, declineRevive };
 }
